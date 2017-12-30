@@ -1,0 +1,49 @@
+{
+    "Node": {
+        "ID": "4b3fb6ad-e40d-dcfb-fd19-d5044fb5d144",
+        "Node": "MacBook2k",
+        "Address": "127.0.0.1",
+        "Datacenter": "dc1",
+        "TaggedAddresses": {
+            "lan": "127.0.0.1",
+            "wan": "127.0.0.1"
+        },
+        "Meta": {
+            "consul-network-segment": ""
+        },
+        "CreateIndex": 5,
+        "ModifyIndex": 6
+    },
+    "Services": {
+        "consul": {
+            "ID": "consul",
+            "Service": "consul",
+            "Tags": [],
+            "Address": "",
+            "Port": 8300,
+            "EnableTagOverride": false,
+            "CreateIndex": 5,
+            "ModifyIndex": 5
+        },
+        "ms-A": {
+            "ID": "ms-A",
+            "Service": "microservice-2",
+            "Tags": [],
+            "Address": "192.168.0.102",
+            "Port": 52421,
+            "EnableTagOverride": false,
+            "CreateIndex": 1424,
+            "ModifyIndex": 1424
+        },
+        "ms-B": {
+            "ID": "ms-B",
+            "Service": "microservice-2",
+            "Tags": [],
+            "Address": "192.168.0.102",
+            "Port": 52439,
+            "EnableTagOverride": false,
+            "CreateIndex": 1426,
+            "ModifyIndex": 1426
+        }
+    }
+}

@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+net.tine2k.eureka_consul_adapter.EurekaConsulAdapterConfig

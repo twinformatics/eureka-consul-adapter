@@ -1,0 +1,30 @@
+[
+    {
+        "Node": "MacBook2k",
+        "CheckID": "service:ms-A",
+        "Name": "Service 'microservice-2' check",
+        "Status": "passing",
+        "Notes": "",
+        "Output": "HTTP GET http://192.168.0.102:52421/health: 200  Output: {\"description\":\"Composite Discovery Client\",\"status\":\"UP\",\"discoveryComposite\":{\"description\":\"Composite Discovery Client\",\"status\":\"UP\",\"discoveryClient\":{\"description\":\"Composite Discovery Client\",\"status\":\"UP\",\"services\":[\"consul\",\"microservice-2\"]}},\"diskSpace\":{\"status\":\"UP\",\"total\":499963170816,\"free\":127296995328,\"threshold\":10485760},\"refreshScope\":{\"status\":\"UP\"},\"consul\":{\"status\":\"UP\",\"leader\":\"127.0.0.1:8300\",\"services\":{\"consul\":[],\"microservice-2\":[]}},\"hystrix\":{\"status\":\"UP\"}}",
+        "ServiceID": "ms-A",
+        "ServiceName": "microservice-2",
+        "ServiceTags": [],
+        "Definition": {},
+        "CreateIndex": 1424,
+        "ModifyIndex": 1425
+    },
+    {
+        "Node": "MacBook2k",
+        "CheckID": "service:ms-B",
+        "Name": "Service 'microservice-2' check",
+        "Status": "passing",
+        "Notes": "",
+        "Output": "HTTP GET http://192.168.0.102:52439/health: 200  Output: {\"description\":\"Composite Discovery Client\",\"status\":\"UP\",\"discoveryComposite\":{\"description\":\"Composite Discovery Client\",\"status\":\"UP\",\"discoveryClient\":{\"description\":\"Composite Discovery Client\",\"status\":\"UP\",\"services\":[\"consul\",\"microservice-2\"]}},\"diskSpace\":{\"status\":\"UP\",\"total\":499963170816,\"free\":127297019904,\"threshold\":10485760},\"refreshScope\":{\"status\":\"UP\"},\"consul\":{\"status\":\"UP\",\"leader\":\"127.0.0.1:8300\",\"services\":{\"consul\":[],\"microservice-2\":[]}},\"hystrix\":{\"status\":\"UP\"}}",
+        "ServiceID": "ms-B",
+        "ServiceName": "microservice-2",
+        "ServiceTags": [],
+        "Definition": {},
+        "CreateIndex": 1426,
+        "ModifyIndex": 1427
+    }
+]

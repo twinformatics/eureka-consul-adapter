@@ -1,0 +1,17 @@
+[
+    {
+        "ID": "4b3fb6ad-e40d-dcfb-fd19-d5044fb5d144",
+        "Node": "MacBook2k",
+        "Address": "127.0.0.1",
+        "Datacenter": "dc1",
+        "TaggedAddresses": {
+            "lan": "127.0.0.1",
+            "wan": "127.0.0.1"
+        },
+        "Meta": {
+            "consul-network-segment": ""
+        },
+        "CreateIndex": 5,
+        "ModifyIndex": 6
+    }
+]

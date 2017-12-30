@@ -1,0 +1,44 @@
+[
+    {
+        "ID": "4b3fb6ad-e40d-dcfb-fd19-d5044fb5d144",
+        "Node": "MacBook2k",
+        "Address": "127.0.0.1",
+        "Datacenter": "dc1",
+        "TaggedAddresses": {
+            "lan": "127.0.0.1",
+            "wan": "127.0.0.1"
+        },
+        "NodeMeta": {
+            "consul-network-segment": ""
+        },
+        "ServiceID": "ms-A",
+        "ServiceName": "microservice-2",
+        "ServiceTags": [],
+        "ServiceAddress": "192.168.0.102",
+        "ServicePort": 52421,
+        "ServiceEnableTagOverride": false,
+        "CreateIndex": 1424,
+        "ModifyIndex": 1424
+    },
+    {
+        "ID": "4b3fb6ad-e40d-dcfb-fd19-d5044fb5d144",
+        "Node": "MacBook2k",
+        "Address": "127.0.0.1",
+        "Datacenter": "dc1",
+        "TaggedAddresses": {
+            "lan": "127.0.0.1",
+            "wan": "127.0.0.1"
+        },
+        "NodeMeta": {
+            "consul-network-segment": ""
+        },
+        "ServiceID": "ms-B",
+        "ServiceName": "microservice-2",
+        "ServiceTags": [],
+        "ServiceAddress": "192.168.0.102",
+        "ServicePort": 52439,
+        "ServiceEnableTagOverride": false,
+        "CreateIndex": 1426,
+        "ModifyIndex": 1426
+    }
+]
