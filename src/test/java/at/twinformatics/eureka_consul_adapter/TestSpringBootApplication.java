@@ -1,4 +1,4 @@
-package net.tine2k.eureka_consul_adapter;
+package at.twinformatics.eureka_consul_adapter;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;

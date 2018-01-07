@@ -1,9 +1,9 @@
-package net.tine2k.eureka_consul_adapter.controller;
+package at.twinformatics.eureka_consul_adapter.controller;
 
+import at.twinformatics.eureka_consul_adapter.model.Agent;
+import at.twinformatics.eureka_consul_adapter.model.Config;
 import com.netflix.config.ConfigurationManager;
 import lombok.RequiredArgsConstructor;
-import net.tine2k.eureka_consul_adapter.model.Agent;
-import net.tine2k.eureka_consul_adapter.model.Config;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;

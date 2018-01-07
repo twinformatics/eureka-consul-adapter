@@ -1,4 +1,4 @@
-package net.tine2k.eureka_consul_adapter.event;
+package at.twinformatics.eureka_consul_adapter.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

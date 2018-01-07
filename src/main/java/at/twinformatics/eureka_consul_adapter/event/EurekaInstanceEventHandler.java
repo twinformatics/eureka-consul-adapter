@@ -1,4 +1,4 @@
-package net.tine2k.eureka_consul_adapter.event;
+package at.twinformatics.eureka_consul_adapter.event;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.netflix.eureka.server.event.EurekaInstanceCanceledEvent;

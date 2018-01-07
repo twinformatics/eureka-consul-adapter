@@ -1,12 +1,12 @@
-package net.tine2k.eureka_consul_adapter;
+package at.twinformatics.eureka_consul_adapter;
 
+import at.twinformatics.eureka_consul_adapter.controller.ServiceController;
+import at.twinformatics.eureka_consul_adapter.event.ServiceChangeDetector;
+import at.twinformatics.eureka_consul_adapter.mapper.ServiceMapper;
 import com.netflix.discovery.shared.Application;
 import com.netflix.discovery.shared.Applications;
 import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import net.minidev.json.JSONArray;
-import net.tine2k.eureka_consul_adapter.controller.ServiceController;
-import net.tine2k.eureka_consul_adapter.event.ServiceChangeDetector;
-import net.tine2k.eureka_consul_adapter.mapper.ServiceMapper;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

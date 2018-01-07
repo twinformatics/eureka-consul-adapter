@@ -1,7 +1,7 @@
-package net.tine2k.eureka_consul_adapter.mapper;
+package at.twinformatics.eureka_consul_adapter.mapper;
 
+import at.twinformatics.eureka_consul_adapter.model.Service;
 import com.netflix.appinfo.InstanceInfo;
-import net.tine2k.eureka_consul_adapter.model.Service;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;

@@ -1,11 +1,11 @@
-package net.tine2k.eureka_consul_adapter.controller;
+package at.twinformatics.eureka_consul_adapter.controller;
 
 import com.netflix.discovery.shared.Application;
 import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import lombok.RequiredArgsConstructor;
-import net.tine2k.eureka_consul_adapter.event.ServiceChangeDetector;
-import net.tine2k.eureka_consul_adapter.mapper.ServiceMapper;
-import net.tine2k.eureka_consul_adapter.model.Service;
+import at.twinformatics.eureka_consul_adapter.event.ServiceChangeDetector;
+import at.twinformatics.eureka_consul_adapter.mapper.ServiceMapper;
+import at.twinformatics.eureka_consul_adapter.model.Service;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
