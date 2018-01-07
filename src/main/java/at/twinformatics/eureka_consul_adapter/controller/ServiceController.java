@@ -58,17 +58,17 @@ public class ServiceController {
                         .collect(toMap(Application::getName, a -> NO_SERVICE_TAGS)));
     }
 
-    @GetMapping(value = "/v1/catalog/service/{service}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/v1/catalog/service/{appName}", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public List<Service> getServices(@PathVariable("service") String service,
+    public List<Service> getServices(@PathVariable("appName") String appName,
                                      @QueryParam(QUERY_PARAM_WAIT) String wait,
                                      @QueryParam(QUERY_PARAM_INDEX) Long index,
                                      HttpServletResponse response) {
 
-        return blockUntilChangeOrTimeout(wait, index, response, () -> serviceChangeDetector.getLastEmittedOfApp(service),
-                waitMillis -> serviceChangeDetector.getOrWait(service, waitMillis),
+        return blockUntilChangeOrTimeout(wait, index, response, () -> serviceChangeDetector.getLastEmittedOfApp(appName),
+                waitMillis -> serviceChangeDetector.getOrWait(appName, waitMillis),
                 () -> {
-                    Application application = registry.getApplication(service);
+                    Application application = registry.getApplication(appName);
                     if (application == null) {
                         return Collections.emptyList();
                     } else {
