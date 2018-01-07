@@ -1,11 +1,12 @@
 package at.twinformatics.eureka_consul_adapter;
 
-import at.twinformatics.eureka_consul_adapter.controller.ServiceController;
-import at.twinformatics.eureka_consul_adapter.event.EurekaInstanceEventHandler;
-import at.twinformatics.eureka_consul_adapter.event.ServiceChangeDetector;
-import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import at.twinformatics.eureka_consul_adapter.controller.AgentController;
+import at.twinformatics.eureka_consul_adapter.controller.ServiceController;
+import at.twinformatics.eureka_consul_adapter.event.CanceledEventHandler;
+import at.twinformatics.eureka_consul_adapter.event.RegisteredEventHandler;
+import at.twinformatics.eureka_consul_adapter.event.ServiceChangeDetector;
 import at.twinformatics.eureka_consul_adapter.mapper.ServiceMapper;
+import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,7 +39,14 @@ public class EurekaConsulAdapterConfig {
     }
 
     @Bean
-    public EurekaInstanceEventHandler EurekaInstanceEventHandler() {
-        return new EurekaInstanceEventHandler(serviceChangeDetector());
+    @ConditionalOnMissingBean
+    public RegisteredEventHandler registeredEventHandler() {
+        return new RegisteredEventHandler(serviceChangeDetector());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public CanceledEventHandler canceledEventHandler() {
+        return new CanceledEventHandler(serviceChangeDetector());
     }
 }

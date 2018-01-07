@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import at.twinformatics.eureka_consul_adapter.event.ServiceChangeDetector;
 import at.twinformatics.eureka_consul_adapter.mapper.ServiceMapper;
 import at.twinformatics.eureka_consul_adapter.model.Service;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,6 +30,7 @@ import static java.util.stream.Collectors.toMap;
 
 @Controller
 @RequiredArgsConstructor
+@Slf4j
 public class ServiceController {
 
     private static final String CONSUL_IDX_HEADER = "X-Consul-Index";
@@ -63,7 +65,7 @@ public class ServiceController {
                                      @QueryParam(QUERY_PARAM_INDEX) Long index,
                                      HttpServletResponse response) {
 
-        return blockUntilChangeOrTimeout(wait, index, response, () -> serviceChangeDetector.getLastEmitted(service),
+        return blockUntilChangeOrTimeout(wait, index, response, () -> serviceChangeDetector.getLastEmittedOfApp(service),
                 waitMillis -> serviceChangeDetector.getOrWait(service, waitMillis),
                 () -> {
                     Application application = registry.getApplication(service);
@@ -74,7 +76,6 @@ public class ServiceController {
                     }
                 });
     }
-
 
     <T> T blockUntilChangeOrTimeout(String wait, Long index, HttpServletResponse response,
                                     Supplier<Long> lastEmitted, Function<Long, Long> waitOrGet,
