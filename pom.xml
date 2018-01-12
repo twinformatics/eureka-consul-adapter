@@ -1,4 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    The MIT License
+    Copyright © 2018 Twinformatics GmbH
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    THE SOFTWARE.
+
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
@@ -9,8 +33,9 @@
     <packaging>jar</packaging>
 
     <name>eureka-consul-adapter</name>
-    <description>Adapter, that allows Prometheus to use Eureka as a discovery service by pretending to be Consul
-    </description>
+    <description>Adapter for a Eureka Spring Boot Server that allows Prometheus to use its Consul discovery service</description>
+    <url>TODO</url>
+    <inceptionYear>2018</inceptionYear>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -71,6 +96,30 @@
                         <configuration>
                             <skip>true</skip>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <header>com/mycila/maven/plugin/license/templates/MIT.txt</header>
+                    <properties>
+                        <owner>Twinformatics GmbH</owner>
+                        <email>open-source@twinformatics.at</email>
+                    </properties>
+                    <excludes>
+                        <exclude>**/README</exclude>
+                        <exclude>src/test/resources/**</exclude>
+                        <exclude>src/main/resources/**</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
