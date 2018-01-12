@@ -29,12 +29,12 @@
 
     <groupId>at.twinformatics</groupId>
     <artifactId>eureka-consul-adapter</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>eureka-consul-adapter</name>
     <description>Adapter for a Eureka Spring Boot Server that allows Prometheus to use its Consul discovery service</description>
-    <url>TODO</url>
+    <url>https://github.com/twinformatics/eureka-consul-adapter</url>
     <inceptionYear>2018</inceptionYear>
 
     <parent>
@@ -96,6 +96,18 @@
                         <configuration>
                             <skip>true</skip>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
