@@ -20,7 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package at.twinformatics.eureka_consul_adapter.model;
+package at.twinformatics.eureka.adapter.consul.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;

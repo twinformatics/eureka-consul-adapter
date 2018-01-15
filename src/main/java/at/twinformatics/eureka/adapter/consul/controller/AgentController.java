@@ -20,17 +20,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package at.twinformatics.eureka_consul_adapter.model;
+package at.twinformatics.eureka.adapter.consul.controller;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Builder;
-import lombok.Getter;
+import at.twinformatics.eureka.adapter.consul.model.Agent;
+import at.twinformatics.eureka.adapter.consul.model.Config;
+import com.netflix.config.ConfigurationManager;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
-@Getter
-@Builder
-public class Config {
+@Controller
+@RequiredArgsConstructor
+public class AgentController {
 
-    @JsonProperty("Datacenter")
-    private String dataCenter;
-
+    @GetMapping(value = "/v1/agent/self", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public Agent getNodes() {
+        String dataCenter = ConfigurationManager.getConfigInstance().getString("archaius.deployment.datacenter");
+        return Agent.builder().config(Config.builder()
+                .dataCenter(dataCenter).build())
+                .build();
+    }
 }

@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-at.twinformatics.eureka_consul_adapter.EurekaConsulAdapterConfig
+at.twinformatics.eureka.adapter.consul.EurekaConsulAdapterConfig

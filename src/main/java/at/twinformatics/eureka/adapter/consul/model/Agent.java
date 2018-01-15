@@ -20,25 +20,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package at.twinformatics.eureka_consul_adapter.event;
+package at.twinformatics.eureka.adapter.consul.model;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.cloud.netflix.eureka.server.event.EurekaInstanceRegisteredEvent;
-import org.springframework.context.ApplicationListener;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
+import lombok.Getter;
 
-@Slf4j
-@RequiredArgsConstructor
-public class RegisteredEventHandler implements ApplicationListener<EurekaInstanceRegisteredEvent> {
+@Getter
+@Builder
+public class Agent {
 
-    private final ServiceChangeDetector serviceChangeDetector;
+    @JsonProperty("Config")
+    private Config config;
 
-    @Override
-    public void onApplicationEvent(EurekaInstanceRegisteredEvent event) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Eureka Instance Registered: " + event.getInstanceInfo().getAppName());
-        }
-        serviceChangeDetector.publish(event.getInstanceInfo().getAppName(), event.getTimestamp());
-    }
 }

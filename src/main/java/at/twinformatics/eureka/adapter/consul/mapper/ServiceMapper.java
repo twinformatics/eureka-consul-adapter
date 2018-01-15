@@ -20,9 +20,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package at.twinformatics.eureka_consul_adapter.mapper;
+package at.twinformatics.eureka.adapter.consul.mapper;
 
-import at.twinformatics.eureka_consul_adapter.model.Service;
+import at.twinformatics.eureka.adapter.consul.model.Service;
 import com.netflix.appinfo.InstanceInfo;
 import org.springframework.stereotype.Component;
 

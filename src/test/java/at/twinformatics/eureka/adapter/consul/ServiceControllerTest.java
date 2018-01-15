@@ -1,17 +1,17 @@
 /**
  * The MIT License
  * Copyright © 2018 Twinformatics GmbH
- *
+ * <p>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * <p>
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
+ * <p>
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,11 +20,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package at.twinformatics.eureka_consul_adapter;
+package at.twinformatics.eureka.adapter.consul;
 
-import at.twinformatics.eureka_consul_adapter.controller.ServiceController;
-import at.twinformatics.eureka_consul_adapter.event.ServiceChangeDetector;
-import at.twinformatics.eureka_consul_adapter.mapper.ServiceMapper;
+import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
+import at.twinformatics.eureka.adapter.consul.controller.ServiceController;
+import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.discovery.shared.Application;
 import com.netflix.discovery.shared.Applications;
@@ -67,16 +67,6 @@ public class ServiceControllerTest {
     @Before
     public void setUp() {
         serviceChangeDetector.reset();
-
-        Applications applications = new Applications();
-        Application app1 = new Application();
-        app1.setName("ms1");
-        applications.addApplication(app1);
-        Application app2 = new Application();
-        app2.setName("ms2");
-        applications.addApplication(app2);
-
-        when(registry.getApplications()).thenReturn(applications);
     }
 
     @Test
@@ -93,6 +83,8 @@ public class ServiceControllerTest {
     @Test
     public void getServices() throws Exception {
 
+        mock2Applications();
+
         this.mockMvc.perform(get("/v1/catalog/services?wait=1ms"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
@@ -102,6 +94,8 @@ public class ServiceControllerTest {
 
     @Test
     public void getServicesTimeout() throws Exception {
+
+        mock2Applications();
 
         this.mockMvc.perform(get("/v1/catalog/services?wait=1ms"))
                 .andExpect(status().isOk())
@@ -139,15 +133,13 @@ public class ServiceControllerTest {
     @Test(timeout = 10000)
     public void getServicesTimeoutWithChange() throws Exception {
 
+        mock2Applications();
+
         new Thread(() -> {
-            try {
-                Thread.sleep(1000);
-                serviceChangeDetector.publish("ms1", 2);
-                Thread.sleep(1000);
-                serviceChangeDetector.publish("ms1", 3);
-            } catch (InterruptedException e) {
-                fail();
-            }
+            sleepFor(1000);
+            serviceChangeDetector.publish("ms1", 2);
+            sleepFor(1000);
+            serviceChangeDetector.publish("ms1", 3);
         }).start();
 
         this.mockMvc.perform(get("/v1/catalog/services?wait=30s"))
@@ -169,21 +161,19 @@ public class ServiceControllerTest {
     @Test(timeout = 10000)
     public void get2ServicesTimeoutWithChange() throws Exception {
 
+        mock2Applications();
+
         new Thread(() -> {
-            try {
-                Thread.sleep(1000);
-                serviceChangeDetector.publish("ms1", 2);
-                Thread.sleep(1000);
+            sleepFor(1000);
+            serviceChangeDetector.publish("ms1", 2);
+            sleepFor(1000);
 
-                Applications applications = new Applications();
-                applications.addApplication(new Application("ms1"));
-                when(registry.getApplications()).thenReturn(applications);
+            Applications applications = new Applications();
+            applications.addApplication(new Application("ms1"));
+            when(registry.getApplications()).thenReturn(applications);
 
-                serviceChangeDetector.publish("ms2", 4);
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                fail();
-            }
+            serviceChangeDetector.publish("ms2", 4);
+            sleepFor(1000);
         }).start();
 
         this.mockMvc.perform(get("/v1/catalog/services?wait=30s"))
@@ -209,15 +199,10 @@ public class ServiceControllerTest {
 
     }
 
-    private JSONArray asJsonArray(String s) {
-        JSONArray array = new JSONArray();
-        array.add(s);
-        return array;
-    }
-
     @Test
     public void getService() throws Exception {
 
+        mock2Applications();
         Application ms1 = registry.getApplications().getRegisteredApplications().get(0);
 
         InstanceInfo instance1 = mock(InstanceInfo.class);
@@ -251,7 +236,7 @@ public class ServiceControllerTest {
         when(instance2.isPortEnabled(InstanceInfo.PortType.SECURE)).thenReturn(true);
         when(instance2.getSecurePort()).thenReturn(443);
 
-        Map<String,String> md = new HashMap<>();
+        Map<String, String> md = new HashMap<>();
         md.put("k1", "v1");
         md.put("k2", "v2");
         when(instance2.getMetadata()).thenReturn(md);
@@ -282,6 +267,7 @@ public class ServiceControllerTest {
     @Test(timeout = 10000)
     public void getServiceTimeoutWithChange() throws Exception {
 
+        mock2Applications();
         Application ms1 = registry.getApplications().getRegisteredApplications().get(0);
 
         InstanceInfo instance1 = mock(InstanceInfo.class);
@@ -297,19 +283,15 @@ public class ServiceControllerTest {
         when(registry.getApplication("ms1")).thenReturn(ms1);
 
         new Thread(() -> {
-            try {
-                Thread.sleep(1000);
-                serviceChangeDetector.publish("ms1", 2);
-                Thread.sleep(500);
-                serviceChangeDetector.publish("ms2", 1);
-                serviceChangeDetector.publish("ms3", 1);
-                serviceChangeDetector.publish("ms4", 1);
-                Thread.sleep(500);
-                when(instance1.getIPAddr()).thenReturn("8.8.8.8");
-                serviceChangeDetector.publish("ms1", 3);
-            } catch (InterruptedException e) {
-                fail();
-            }
+            sleepFor(1000);
+            serviceChangeDetector.publish("ms1", 2);
+            sleepFor(500);
+            serviceChangeDetector.publish("ms2", 1);
+            serviceChangeDetector.publish("ms3", 1);
+            serviceChangeDetector.publish("ms4", 1);
+            sleepFor(500);
+            when(instance1.getIPAddr()).thenReturn("8.8.8.8");
+            serviceChangeDetector.publish("ms1", 3);
         }).start();
 
         this.mockMvc.perform(get("/v1/catalog/service/ms1?wait=30s"))
@@ -334,5 +316,25 @@ public class ServiceControllerTest {
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(jsonPath("$[0].Address", is("8.8.8.8")));
 
+    }
+
+    private void mock2Applications() {
+        Applications applications = new Applications();
+        Application app1 = new Application();
+        app1.setName("ms1");
+        applications.addApplication(app1);
+        Application app2 = new Application();
+        app2.setName("ms2");
+        applications.addApplication(app2);
+
+        when(registry.getApplications()).thenReturn(applications);
+    }
+
+    private void sleepFor(final int millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            fail();
+        }
     }
 }
