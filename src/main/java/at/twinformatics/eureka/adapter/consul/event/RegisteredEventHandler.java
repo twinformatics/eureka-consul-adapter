@@ -37,7 +37,7 @@ public class RegisteredEventHandler implements ApplicationListener<EurekaInstanc
     public void onApplicationEvent(EurekaInstanceRegisteredEvent event) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Eureka Instance Registered: " + event.getInstanceInfo().getAppName());
+            log.debug("Eureka Instance Registered: {}", event.getInstanceInfo().getAppName());
         }
         serviceChangeDetector.publish(event.getInstanceInfo().getAppName(), event.getTimestamp());
     }
