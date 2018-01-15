@@ -20,25 +20,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package at.twinformatics.eureka_consul_adapter.event;
+package at.twinformatics.eureka.adapter.consul.model;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.cloud.netflix.eureka.server.event.EurekaInstanceCanceledEvent;
-import org.springframework.context.ApplicationListener;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
+import lombok.Getter;
 
-@Slf4j
-@RequiredArgsConstructor
-public class CanceledEventHandler implements ApplicationListener<EurekaInstanceCanceledEvent> {
+@Getter
+@Builder
+public class Agent {
 
-    private final ServiceChangeDetector serviceChangeDetector;
+    @JsonProperty("Config")
+    private Config config;
 
-    @Override
-    public void onApplicationEvent(EurekaInstanceCanceledEvent event) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Eureka Instance Canceled: " + event.getAppName());
-        }
-        serviceChangeDetector.publish(event.getAppName(), event.getTimestamp());
-    }
 }

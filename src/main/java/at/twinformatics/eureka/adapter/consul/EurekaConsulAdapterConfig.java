@@ -20,14 +20,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package at.twinformatics.eureka_consul_adapter;
+package at.twinformatics.eureka.adapter.consul;
 
-import at.twinformatics.eureka_consul_adapter.controller.AgentController;
-import at.twinformatics.eureka_consul_adapter.controller.ServiceController;
-import at.twinformatics.eureka_consul_adapter.event.CanceledEventHandler;
-import at.twinformatics.eureka_consul_adapter.event.RegisteredEventHandler;
-import at.twinformatics.eureka_consul_adapter.event.ServiceChangeDetector;
-import at.twinformatics.eureka_consul_adapter.mapper.ServiceMapper;
+import at.twinformatics.eureka.adapter.consul.event.CanceledEventHandler;
+import at.twinformatics.eureka.adapter.consul.event.RegisteredEventHandler;
+import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
+import at.twinformatics.eureka.adapter.consul.controller.AgentController;
+import at.twinformatics.eureka.adapter.consul.controller.ServiceController;
+import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
 import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;

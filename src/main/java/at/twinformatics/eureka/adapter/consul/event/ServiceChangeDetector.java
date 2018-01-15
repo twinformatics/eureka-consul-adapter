@@ -20,19 +20,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package at.twinformatics.eureka_consul_adapter.event;
+package at.twinformatics.eureka.adapter.consul.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import rx.Observable;
 import rx.subjects.PublishSubject;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Component
@@ -43,13 +44,6 @@ public class ServiceChangeDetector {
 
     private final PublishSubject<ServiceChange> eventStream = PublishSubject.create();
     private final Map<String, AtomicLong> changeCounters = Collections.synchronizedMap(new HashMap<>());
-
-    @AllArgsConstructor
-    @Getter
-    private static class ServiceChange {
-        private String name;
-        private long timestamp;
-    }
 
     public ServiceChangeDetector() {
         eventStream.subscribe(
@@ -73,19 +67,23 @@ public class ServiceChangeDetector {
 
     public Long getOrWait(String appName, long millis) {
         // waits for change of app A or x seconds
-        eventStream
+        return eventStream
                 .timeout(millis, TimeUnit.MILLISECONDS)
-                .onErrorResumeNext(Observable.from(new ServiceChange[]{new ServiceChange(appName, -1)}))
-                .toBlocking().first(s -> s.getName().equals(appName)).getName();
-        return getLastEmittedOfApp(appName);
+                .onErrorReturn(err -> mapTimeoutToServiceChange(err, Optional.of(appName)))
+                .filter(se -> se.getName().equals(appName))
+                .map(se -> getLastEmittedOfApp(se.getName()))
+                .toBlocking()
+                .first();
     }
 
     public Long getOrWait(long millis) {
         // waits for change or x seconds
-        eventStream.timeout(millis, TimeUnit.MILLISECONDS)
-                .onErrorResumeNext(Observable.from(new ServiceChange[]{new ServiceChange("", -1)}))
-                .toBlocking().first();
-        return getLastEmitted();
+        return eventStream
+                .timeout(millis, TimeUnit.MILLISECONDS)
+                .onErrorReturn(err -> mapTimeoutToServiceChange(err, Optional.empty()))
+                .map(se -> getLastEmitted())
+                .toBlocking()
+                .first();
     }
 
     public Long getLastEmitted() {
@@ -108,5 +106,19 @@ public class ServiceChangeDetector {
 
     public void reset() {
         changeCounters.clear();
+    }
+
+    private ServiceChange mapTimeoutToServiceChange(Throwable err, Optional<String> appName){
+        if (err instanceof TimeoutException) {
+            return new ServiceChange(appName.orElse(""), -1);
+        }
+        throw new RuntimeException(err.getMessage(), err);
+    }
+
+    @AllArgsConstructor
+    @Getter
+    private static class ServiceChange {
+        private String name;
+        private long timestamp;
     }
 }

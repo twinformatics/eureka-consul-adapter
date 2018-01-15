@@ -20,14 +20,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package at.twinformatics.eureka_consul_adapter.controller;
+package at.twinformatics.eureka.adapter.consul.controller;
 
+import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
+import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
+import at.twinformatics.eureka.adapter.consul.model.Service;
 import com.netflix.discovery.shared.Application;
 import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import lombok.RequiredArgsConstructor;
-import at.twinformatics.eureka_consul_adapter.event.ServiceChangeDetector;
-import at.twinformatics.eureka_consul_adapter.mapper.ServiceMapper;
-import at.twinformatics.eureka_consul_adapter.model.Service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
