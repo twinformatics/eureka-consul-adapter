@@ -29,7 +29,7 @@
 
     <groupId>at.twinformatics</groupId>
     <artifactId>eureka-consul-adapter</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>unspecified</version>
     <packaging>jar</packaging>
 
     <name>eureka-consul-adapter</name>
