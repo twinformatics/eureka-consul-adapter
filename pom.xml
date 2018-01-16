@@ -84,6 +84,7 @@
     </dependencyManagement>
 
     <build>
+        <finalName>eureka-consul-adapter</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
