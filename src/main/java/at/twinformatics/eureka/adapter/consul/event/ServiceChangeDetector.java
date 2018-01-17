@@ -45,24 +45,19 @@ public class ServiceChangeDetector {
     private final PublishSubject<ServiceChange> eventStream = PublishSubject.create();
     private final Map<String, AtomicLong> changeCounters = Collections.synchronizedMap(new HashMap<>());
 
-    public ServiceChangeDetector() {
-        eventStream.subscribe(
-                app -> {
-                    changeCounters.computeIfAbsent(app.getName(), x -> new AtomicLong(INITIAL_VALUE))
-                            .set(app.getTimestamp());
-                    if (log.isDebugEnabled()) {
-                        log.debug("Incrementing change counter: appname {}, value {}",
-                                app.getName(), changeCounters.get(app.getName()));
-                    }
-                });
-    }
-
     public void publish(String appName, long timestamp) {
 
+        ServiceChange change = new ServiceChange(appName, timestamp);
+
         if (log.isDebugEnabled()) {
-            log.debug("New change detected: appname {}, timestamp {}", appName, timestamp);
+            log.debug("Incrementing change counter: appname {}, value {}",
+                    change.getName(), changeCounters.get(change.getName()));
         }
-        eventStream.onNext(new ServiceChange(appName, timestamp));
+
+        changeCounters.computeIfAbsent(change.getName(), x -> new AtomicLong(INITIAL_VALUE))
+                .set(change.getTimestamp());
+
+        eventStream.onNext(change);
     }
 
     public Long getOrWait(String appName, long millis) {
