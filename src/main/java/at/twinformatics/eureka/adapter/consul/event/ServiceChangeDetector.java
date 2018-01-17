@@ -68,9 +68,9 @@ public class ServiceChangeDetector {
     public Long getOrWait(String appName, long millis) {
         // waits for change of app A or x seconds
         return eventStream
+                .filter(se -> se.getName().equals(appName))
                 .timeout(millis, TimeUnit.MILLISECONDS)
                 .onErrorReturn(err -> mapTimeoutToServiceChange(err, Optional.of(appName)))
-                .filter(se -> se.getName().equals(appName))
                 .map(se -> getLastEmittedOfApp(se.getName()))
                 .toBlocking()
                 .first();
