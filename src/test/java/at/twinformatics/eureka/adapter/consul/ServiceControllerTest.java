@@ -23,6 +23,7 @@
 package at.twinformatics.eureka.adapter.consul;
 
 import at.twinformatics.eureka.adapter.consul.controller.ServiceController;
+import at.twinformatics.eureka.adapter.consul.event.ChangeCounter;
 import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
 import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
 import com.netflix.appinfo.InstanceInfo;
@@ -58,7 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @Slf4j
 @RunWith(SpringRunner.class)
-@WebMvcTest(controllers = {ServiceController.class, ServiceChangeDetector.class, ServiceMapper.class})
+@WebMvcTest(controllers = {ServiceController.class, ServiceChangeDetector.class, ServiceMapper.class, ChangeCounter.class})
 public class ServiceControllerTest {
 
     @Autowired
@@ -70,12 +71,15 @@ public class ServiceControllerTest {
     @Autowired
     private ServiceChangeDetector serviceChangeDetector;
 
+    @Autowired
+    private ChangeCounter changeCounter;
+
     private ExecutorService executorService1;
 
     @Before
     public void setUp() {
         executorService1 = Executors.newSingleThreadExecutor();
-        serviceChangeDetector.reset();
+        changeCounter.reset();
     }
 
     @After
@@ -85,7 +89,7 @@ public class ServiceControllerTest {
     }
 
     @Test
-    public void getNoServices() throws Exception {
+    public void services_noServices_emptyObj() throws Exception {
 
         when(registry.getApplications()).thenReturn(new Applications());
 
@@ -96,7 +100,7 @@ public class ServiceControllerTest {
     }
 
     @Test
-    public void getServices() throws Exception {
+    public void services_1Service_serviceObj() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
@@ -109,7 +113,7 @@ public class ServiceControllerTest {
     }
 
     @Test
-    public void getServicesTimeout() throws Exception {
+    public void services_syncChangesToMs1_interruptOnChange() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
@@ -121,43 +125,43 @@ public class ServiceControllerTest {
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2", is(new JSONArray())));
 
-        serviceChangeDetector.publish("ms1", 2);
+        serviceChangeDetector.publish("ms1");
 
         this.mockMvc.perform(get("/v1/catalog/services?wait=1ms&index=1"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(header().string("X-Consul-Index", "2"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
-                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
-
-        this.mockMvc.perform(get("/v1/catalog/services?wait=1ms&index=2"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(header().string("X-Consul-Index", "2"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
-                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
-
-        serviceChangeDetector.publish("ms1", 3);
-
-        this.mockMvc.perform(get("/v1/catalog/services?wait=1ms&index=2"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "3"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+
+        this.mockMvc.perform(get("/v1/catalog/services?wait=1ms&index=3"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json;charset=UTF-8"))
+                .andExpect(header().string("X-Consul-Index", "3"))
+                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
+                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+
+        serviceChangeDetector.publish("ms1");
+
+        this.mockMvc.perform(get("/v1/catalog/services?wait=1ms&index=3"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json;charset=UTF-8"))
+                .andExpect(header().string("X-Consul-Index", "4"))
+                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
+                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
     }
 
     @Test(timeout = 10000)
-    public void getServicesTimeoutWithChange() throws Exception {
+    public void services_asyncChangesToMs1_interruptOnChange() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
 
         startThread(() -> {
             sleepFor(1000);
-            serviceChangeDetector.publish("ms1", 2);
+            serviceChangeDetector.publish("ms1");
             sleepFor(1000);
-            serviceChangeDetector.publish("ms1", 3);
+            serviceChangeDetector.publish("ms1");
         });
 
         this.mockMvc.perform(get("/v1/catalog/services?wait=30s"))
@@ -170,28 +174,28 @@ public class ServiceControllerTest {
         this.mockMvc.perform(get("/v1/catalog/services?wait=30s&index=1"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(header().string("X-Consul-Index", "2"))
+                .andExpect(header().string("X-Consul-Index", "3"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2", is(new JSONArray())));
 
     }
 
     @Test(timeout = 10000)
-    public void get2ServicesTimeoutWithChange() throws Exception {
+    public void services_asyncChangesToMs1AndMs2_interruptOnChange() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
 
         startThread(() -> {
             sleepFor(1000);
-            serviceChangeDetector.publish("ms1", 2);
+            serviceChangeDetector.publish("ms1");
             sleepFor(1000);
 
             Applications newApplications = new Applications();
             newApplications.addApplication(new Application("ms1"));
             when(registry.getApplications()).thenReturn(newApplications);
 
-            serviceChangeDetector.publish("ms2", 4);
+            serviceChangeDetector.publish("ms2");
             sleepFor(1000);
         });
 
@@ -205,21 +209,21 @@ public class ServiceControllerTest {
         this.mockMvc.perform(get("/v1/catalog/services?wait=30s&index=1"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(header().string("X-Consul-Index", "2"))
+                .andExpect(header().string("X-Consul-Index", "3"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2", is(new JSONArray())));
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=30s&index=2"))
+        this.mockMvc.perform(get("/v1/catalog/services?wait=30s&index=3"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(header().string("X-Consul-Index", "4"))
+                .andExpect(header().string("X-Consul-Index", "5"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2").doesNotExist());
 
     }
 
     @Test
-    public void getService() throws Exception {
+    public void service_sampleService_jsonObject() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
@@ -272,7 +276,7 @@ public class ServiceControllerTest {
     }
 
     @Test(timeout = 10000)
-    public void getServiceTimeoutWithChange() throws Exception {
+    public void service_serviceChangesToOtherServices_interruptOnCorrectService() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
@@ -285,14 +289,14 @@ public class ServiceControllerTest {
 
         startThread(() -> {
             sleepFor(1000);
-            serviceChangeDetector.publish("ms1", 2);
+            serviceChangeDetector.publish("ms1");
             sleepFor(500);
-            serviceChangeDetector.publish("ms2", 1);
-            serviceChangeDetector.publish("ms3", 1);
-            serviceChangeDetector.publish("ms4", 1);
+            serviceChangeDetector.publish("ms2");
+            serviceChangeDetector.publish("ms3");
+            serviceChangeDetector.publish("ms4");
             sleepFor(500);
             when(instance1.getIPAddr()).thenReturn("8.8.8.8");
-            serviceChangeDetector.publish("ms1", 3);
+            serviceChangeDetector.publish("ms1");
         });
 
         this.mockMvc.perform(get("/v1/catalog/service/ms1?wait=30s"))
@@ -333,15 +337,15 @@ public class ServiceControllerTest {
 
         startThread(() -> {
             sleepFor(500);
-            serviceChangeDetector.publish("ms2", 1);
+            serviceChangeDetector.publish("ms2");
             sleepFor(500);
-            serviceChangeDetector.publish("ms2", 2);
+            serviceChangeDetector.publish("ms2");
             sleepFor(500);
-            serviceChangeDetector.publish("ms2", 3);
+            serviceChangeDetector.publish("ms2");
             sleepFor(500);
-            serviceChangeDetector.publish("ms2", 4);
+            serviceChangeDetector.publish("ms2");
             sleepFor(500);
-            serviceChangeDetector.publish("ms2", 5);
+            serviceChangeDetector.publish("ms2");
         });
 
         long t1 = System.currentTimeMillis();
