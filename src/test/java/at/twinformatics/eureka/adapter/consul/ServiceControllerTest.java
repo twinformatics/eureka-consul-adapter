@@ -22,8 +22,8 @@
  */
 package at.twinformatics.eureka.adapter.consul;
 
-import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
 import at.twinformatics.eureka.adapter.consul.controller.ServiceController;
+import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
 import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.discovery.shared.Application;
@@ -31,6 +31,7 @@ import com.netflix.discovery.shared.Applications;
 import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import lombok.extern.slf4j.Slf4j;
 import net.minidev.json.JSONArray;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,8 +43,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -56,17 +62,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class ServiceControllerTest {
 
     @Autowired
-    MockMvc mockMvc;
+    private MockMvc mockMvc;
 
     @MockBean
-    PeerAwareInstanceRegistry registry;
+    private PeerAwareInstanceRegistry registry;
 
     @Autowired
-    ServiceChangeDetector serviceChangeDetector;
+    private ServiceChangeDetector serviceChangeDetector;
+
+    private ExecutorService executorService1;
 
     @Before
     public void setUp() {
+        executorService1 = Executors.newSingleThreadExecutor();
         serviceChangeDetector.reset();
+    }
+
+    @After
+    public void tearDown() throws InterruptedException {
+        executorService1.shutdown();
+        executorService1.awaitTermination(10, TimeUnit.SECONDS);
     }
 
     @Test
@@ -83,7 +98,8 @@ public class ServiceControllerTest {
     @Test
     public void getServices() throws Exception {
 
-        mock2Applications();
+        Applications applications = mock2Applications();
+        when(registry.getApplications()).thenReturn(applications);
 
         this.mockMvc.perform(get("/v1/catalog/services?wait=1ms"))
                 .andExpect(status().isOk())
@@ -95,7 +111,8 @@ public class ServiceControllerTest {
     @Test
     public void getServicesTimeout() throws Exception {
 
-        mock2Applications();
+        Applications applications = mock2Applications();
+        when(registry.getApplications()).thenReturn(applications);
 
         this.mockMvc.perform(get("/v1/catalog/services?wait=1ms"))
                 .andExpect(status().isOk())
@@ -133,14 +150,15 @@ public class ServiceControllerTest {
     @Test(timeout = 10000)
     public void getServicesTimeoutWithChange() throws Exception {
 
-        mock2Applications();
+        Applications applications = mock2Applications();
+        when(registry.getApplications()).thenReturn(applications);
 
-        new Thread(() -> {
+        startThread(() -> {
             sleepFor(1000);
             serviceChangeDetector.publish("ms1", 2);
             sleepFor(1000);
             serviceChangeDetector.publish("ms1", 3);
-        }).start();
+        });
 
         this.mockMvc.perform(get("/v1/catalog/services?wait=30s"))
                 .andExpect(status().isOk())
@@ -161,20 +179,21 @@ public class ServiceControllerTest {
     @Test(timeout = 10000)
     public void get2ServicesTimeoutWithChange() throws Exception {
 
-        mock2Applications();
+        Applications applications = mock2Applications();
+        when(registry.getApplications()).thenReturn(applications);
 
-        new Thread(() -> {
+        startThread(() -> {
             sleepFor(1000);
             serviceChangeDetector.publish("ms1", 2);
             sleepFor(1000);
 
-            Applications applications = new Applications();
-            applications.addApplication(new Application("ms1"));
-            when(registry.getApplications()).thenReturn(applications);
+            Applications newApplications = new Applications();
+            newApplications.addApplication(new Application("ms1"));
+            when(registry.getApplications()).thenReturn(newApplications);
 
             serviceChangeDetector.publish("ms2", 4);
             sleepFor(1000);
-        }).start();
+        });
 
         this.mockMvc.perform(get("/v1/catalog/services?wait=30s"))
                 .andExpect(status().isOk())
@@ -202,17 +221,11 @@ public class ServiceControllerTest {
     @Test
     public void getService() throws Exception {
 
-        mock2Applications();
-        Application ms1 = registry.getApplications().getRegisteredApplications().get(0);
+        Applications applications = mock2Applications();
+        when(registry.getApplications()).thenReturn(applications);
+        Application ms1 = applications.getRegisteredApplications().get(0);
 
-        InstanceInfo instance1 = mock(InstanceInfo.class);
-        when(instance1.getId()).thenReturn("1");
-        when(instance1.getAppName()).thenReturn("ms1");
-        when(instance1.getIPAddr()).thenReturn("1.2.3.4");
-        when(instance1.getPort()).thenReturn(80);
-        when(instance1.isPortEnabled(InstanceInfo.PortType.SECURE)).thenReturn(false);
-        when(instance1.getSecurePort()).thenReturn(443);
-
+        InstanceInfo instance1 = mock1Instance();
         ms1.addInstance(instance1);
 
         when(registry.getApplication("ms1")).thenReturn(ms1);
@@ -228,13 +241,7 @@ public class ServiceControllerTest {
                 .andExpect(jsonPath("$[0].NodeMeta").isEmpty())
                 .andExpect(jsonPath("$[0].ServiceTags", is(new JSONArray())));
 
-        InstanceInfo instance2 = mock(InstanceInfo.class);
-        when(instance2.getId()).thenReturn("2");
-        when(instance2.getAppName()).thenReturn("ms1");
-        when(instance2.getIPAddr()).thenReturn("1.2.3.5");
-        when(instance2.getPort()).thenReturn(81);
-        when(instance2.isPortEnabled(InstanceInfo.PortType.SECURE)).thenReturn(true);
-        when(instance2.getSecurePort()).thenReturn(443);
+        InstanceInfo instance2 = mock1Instance("2","1.2.3.5", 81, true);
 
         Map<String, String> md = new HashMap<>();
         md.put("k1", "v1");
@@ -267,22 +274,16 @@ public class ServiceControllerTest {
     @Test(timeout = 10000)
     public void getServiceTimeoutWithChange() throws Exception {
 
-        mock2Applications();
-        Application ms1 = registry.getApplications().getRegisteredApplications().get(0);
+        Applications applications = mock2Applications();
+        when(registry.getApplications()).thenReturn(applications);
+        Application ms1 = applications.getRegisteredApplications().get(0);
 
-        InstanceInfo instance1 = mock(InstanceInfo.class);
-        when(instance1.getId()).thenReturn("1");
-        when(instance1.getAppName()).thenReturn("ms1");
-        when(instance1.getIPAddr()).thenReturn("1.2.3.4");
-        when(instance1.getPort()).thenReturn(80);
-        when(instance1.isPortEnabled(InstanceInfo.PortType.SECURE)).thenReturn(false);
-        when(instance1.getSecurePort()).thenReturn(443);
-
+        InstanceInfo instance1 = mock1Instance();
         ms1.addInstance(instance1);
 
         when(registry.getApplication("ms1")).thenReturn(ms1);
 
-        new Thread(() -> {
+        startThread(() -> {
             sleepFor(1000);
             serviceChangeDetector.publish("ms1", 2);
             sleepFor(500);
@@ -292,7 +293,7 @@ public class ServiceControllerTest {
             sleepFor(500);
             when(instance1.getIPAddr()).thenReturn("8.8.8.8");
             serviceChangeDetector.publish("ms1", 3);
-        }).start();
+        });
 
         this.mockMvc.perform(get("/v1/catalog/service/ms1?wait=30s"))
                 .andExpect(status().isOk())
@@ -318,7 +319,44 @@ public class ServiceControllerTest {
 
     }
 
-    private void mock2Applications() {
+    @Test(timeout = 3000)
+    public void services_eventInterruptsRequestError_isResolved() throws Exception {
+
+
+        Applications applications = mock2Applications();
+        when(registry.getApplications()).thenReturn(applications);
+
+        Application ms1 = applications.getRegisteredApplications().get(0);
+        InstanceInfo instance1 = mock1Instance();
+        ms1.addInstance(instance1);
+        when(registry.getApplication("ms1")).thenReturn(ms1);
+
+        startThread(() -> {
+            sleepFor(500);
+            serviceChangeDetector.publish("ms2", 1);
+            sleepFor(500);
+            serviceChangeDetector.publish("ms2", 2);
+            sleepFor(500);
+            serviceChangeDetector.publish("ms2", 3);
+            sleepFor(500);
+            serviceChangeDetector.publish("ms2", 4);
+            sleepFor(500);
+            serviceChangeDetector.publish("ms2", 5);
+        });
+
+        long t1 = System.currentTimeMillis();
+        this.mockMvc.perform(get("/v1/catalog/service/ms1?wait=2s&index=1"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json;charset=UTF-8"))
+                .andExpect(header().string("X-Consul-Index", "1"))
+                .andExpect(content().contentType("application/json;charset=UTF-8"))
+                .andExpect(jsonPath("$[0].Address", is("1.2.3.4")));
+
+        assertThat(System.currentTimeMillis() - t1, is(greaterThan(2000L)));
+
+    }
+
+    private Applications mock2Applications() {
         Applications applications = new Applications();
         Application app1 = new Application();
         app1.setName("ms1");
@@ -327,7 +365,26 @@ public class ServiceControllerTest {
         app2.setName("ms2");
         applications.addApplication(app2);
 
-        when(registry.getApplications()).thenReturn(applications);
+        return applications;
+    }
+
+    private void startThread(Runnable t) {
+        executorService1.submit(t);
+    }
+
+    private InstanceInfo mock1Instance() {
+        return mock1Instance("1",  "1.2.3.4",80, false);
+    }
+
+    private InstanceInfo mock1Instance(String id, String ip, int port, boolean securePort) {
+        InstanceInfo instance1 = mock(InstanceInfo.class);
+        when(instance1.getId()).thenReturn(id);
+        when(instance1.getAppName()).thenReturn("ms1");
+        when(instance1.getIPAddr()).thenReturn(ip);
+        when(instance1.getPort()).thenReturn(port);
+        when(instance1.isPortEnabled(InstanceInfo.PortType.SECURE)).thenReturn(securePort);
+        when(instance1.getSecurePort()).thenReturn(443);
+        return instance1;
     }
 
     private void sleepFor(final int millis) {
