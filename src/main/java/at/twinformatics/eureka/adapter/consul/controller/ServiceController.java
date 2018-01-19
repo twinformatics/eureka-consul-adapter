@@ -37,10 +37,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.QueryParam;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -77,7 +74,9 @@ public class ServiceController {
         return blockUntilChangeOrTimeout(wait, index, response, serviceChangeDetector::getLastEmitted,
                 serviceChangeDetector::getOrWait,
                 () -> registry.getApplications().getRegisteredApplications().stream()
-                        .collect(toMap(Application::getName, a -> NO_SERVICE_TAGS)));
+                        .collect(toMap(Application::getName, a -> NO_SERVICE_TAGS,
+                                (u,v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
+                                TreeMap::new)));
     }
 
     @GetMapping(value = "/v1/catalog/service/{appName}", produces = MediaType.APPLICATION_JSON_VALUE)

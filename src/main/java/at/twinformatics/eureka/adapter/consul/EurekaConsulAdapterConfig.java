@@ -22,16 +22,22 @@
  */
 package at.twinformatics.eureka.adapter.consul;
 
-import at.twinformatics.eureka.adapter.consul.event.CanceledEventHandler;
-import at.twinformatics.eureka.adapter.consul.event.RegisteredEventHandler;
-import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
 import at.twinformatics.eureka.adapter.consul.controller.AgentController;
 import at.twinformatics.eureka.adapter.consul.controller.ServiceController;
+import at.twinformatics.eureka.adapter.consul.event.RegistrationEventInstanceRegistry;
+import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
 import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
+import com.netflix.discovery.EurekaClient;
+import com.netflix.discovery.EurekaClientConfig;
+import com.netflix.eureka.EurekaServerConfig;
 import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
+import com.netflix.eureka.resources.ServerCodecs;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.cloud.netflix.eureka.server.InstanceRegistryProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.util.Assert;
 
 @Configuration
 public class EurekaConsulAdapterConfig {
@@ -45,7 +51,22 @@ public class EurekaConsulAdapterConfig {
     @Bean
     @ConditionalOnMissingBean
     public ServiceController serviceController(PeerAwareInstanceRegistry peerAwareInstanceRegistry) {
+        Assert.isTrue(peerAwareInstanceRegistry instanceof RegistrationEventInstanceRegistry,
+                "Instance Registry must be of type" + RegistrationEventInstanceRegistry.class.getName());
         return new ServiceController(peerAwareInstanceRegistry, serviceChangeDetector(), serviceMapper());
+    }
+
+    @Bean
+    @Primary
+    public RegistrationEventInstanceRegistry registrationEventInstanceRegistry(
+            ServerCodecs serverCodecs, EurekaServerConfig eurekaServerConfig, EurekaClient eurekaClient,
+            EurekaClientConfig eurekaClientConfig, InstanceRegistryProperties instanceRegistryProperties,
+            ServiceChangeDetector serviceChangeDetector) {
+        eurekaClient.getApplications(); // force initialization
+        return new RegistrationEventInstanceRegistry(eurekaServerConfig, eurekaClientConfig,
+                serverCodecs, eurekaClient,
+                instanceRegistryProperties.getExpectedNumberOfRenewsPerMin(),
+                instanceRegistryProperties.getDefaultOpenForTrafficCount(), serviceChangeDetector);
     }
 
     @Bean
@@ -60,15 +81,4 @@ public class EurekaConsulAdapterConfig {
         return new ServiceChangeDetector();
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public RegisteredEventHandler registeredEventHandler() {
-        return new RegisteredEventHandler(serviceChangeDetector());
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public CanceledEventHandler canceledEventHandler() {
-        return new CanceledEventHandler(serviceChangeDetector());
-    }
 }
