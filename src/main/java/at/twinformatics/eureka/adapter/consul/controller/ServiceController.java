@@ -22,7 +22,6 @@
  */
 package at.twinformatics.eureka.adapter.consul.controller;
 
-import at.twinformatics.eureka.adapter.consul.event.ChangeCounter;
 import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
 import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
 import at.twinformatics.eureka.adapter.consul.model.Service;
@@ -68,7 +67,6 @@ public class ServiceController {
     private final PeerAwareInstanceRegistry registry;
     private final ServiceChangeDetector serviceChangeDetector;
     private final ServiceMapper serviceMapper;
-    private final ChangeCounter changeCounter;
 
     @GetMapping(value = "/v1/catalog/services", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
@@ -76,7 +74,7 @@ public class ServiceController {
                                                  @QueryParam(QUERY_PARAM_INDEX) Long index,
                                                  HttpServletResponse response) {
 
-        return blockUntilChangeOrTimeout(wait, index, response, changeCounter::getTotalCount,
+        return blockUntilChangeOrTimeout(wait, index, response, serviceChangeDetector::getLastEmitted,
                 serviceChangeDetector::getOrWait,
                 () -> registry.getApplications().getRegisteredApplications().stream()
                         .collect(toMap(Application::getName, a -> NO_SERVICE_TAGS)));
@@ -89,7 +87,7 @@ public class ServiceController {
                                      @QueryParam(QUERY_PARAM_INDEX) Long index,
                                      HttpServletResponse response) {
 
-        return blockUntilChangeOrTimeout(wait, index, response, () -> changeCounter.getChangeCount(appName),
+        return blockUntilChangeOrTimeout(wait, index, response, () -> serviceChangeDetector.getLastEmittedOfApp(appName),
                 waitMillis -> serviceChangeDetector.getOrWait(appName, waitMillis),
                 () -> {
                     Application application = registry.getApplication(appName);

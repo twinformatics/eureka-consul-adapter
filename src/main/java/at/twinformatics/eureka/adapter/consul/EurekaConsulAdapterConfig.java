@@ -23,7 +23,6 @@
 package at.twinformatics.eureka.adapter.consul;
 
 import at.twinformatics.eureka.adapter.consul.event.CanceledEventHandler;
-import at.twinformatics.eureka.adapter.consul.event.ChangeCounter;
 import at.twinformatics.eureka.adapter.consul.event.RegisteredEventHandler;
 import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
 import at.twinformatics.eureka.adapter.consul.controller.AgentController;
@@ -46,8 +45,7 @@ public class EurekaConsulAdapterConfig {
     @Bean
     @ConditionalOnMissingBean
     public ServiceController serviceController(PeerAwareInstanceRegistry peerAwareInstanceRegistry) {
-        return new ServiceController(peerAwareInstanceRegistry, serviceChangeDetector(),
-                serviceMapper(), changeCounter());
+        return new ServiceController(peerAwareInstanceRegistry, serviceChangeDetector(), serviceMapper());
     }
 
     @Bean
@@ -59,7 +57,7 @@ public class EurekaConsulAdapterConfig {
     @Bean
     @ConditionalOnMissingBean
     public ServiceChangeDetector serviceChangeDetector() {
-        return new ServiceChangeDetector(changeCounter());
+        return new ServiceChangeDetector();
     }
 
     @Bean
@@ -72,11 +70,5 @@ public class EurekaConsulAdapterConfig {
     @ConditionalOnMissingBean
     public CanceledEventHandler canceledEventHandler() {
         return new CanceledEventHandler(serviceChangeDetector());
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public ChangeCounter changeCounter() {
-        return new ChangeCounter();
     }
 }

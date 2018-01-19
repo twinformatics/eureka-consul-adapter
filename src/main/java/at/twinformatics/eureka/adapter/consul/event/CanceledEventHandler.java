@@ -39,6 +39,6 @@ public class CanceledEventHandler implements ApplicationListener<EurekaInstanceC
         if (log.isDebugEnabled()) {
             log.debug("Eureka Instance Canceled: {}", event.getAppName());
         }
-        serviceChangeDetector.publish(event.getAppName());
+        serviceChangeDetector.publish(event.getAppName(), event.getTimestamp());
     }
 }

@@ -22,42 +22,51 @@
  */
 package at.twinformatics.eureka.adapter.consul.event;
 
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import rx.subjects.PublishSubject;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class ServiceChangeDetector {
 
-    private final PublishSubject<String> eventStream = PublishSubject.create();
+    private static final long INITIAL_VALUE = 1L;
 
-    private final ChangeCounter changeCounter;
+    private final PublishSubject<ServiceChange> eventStream = PublishSubject.create();
+    private final Map<String, AtomicLong> changeCounters = Collections.synchronizedMap(new HashMap<>());
 
-    public void publish(String appName) {
+    public void publish(String appName, long timestamp) {
+
+        ServiceChange change = new ServiceChange(appName, timestamp);
 
         if (log.isDebugEnabled()) {
-            log.debug("Incrementing change counter: appname {}", appName);
+            log.debug("Incrementing change counter: appname {}, value {}",
+                    change.getName(), changeCounters.get(change.getName()));
         }
 
-        changeCounter.registerChange(appName);
+        changeCounters.computeIfAbsent(change.getName(), x -> new AtomicLong(INITIAL_VALUE))
+                .set(change.getTimestamp());
 
-        eventStream.onNext(appName);
+        eventStream.onNext(change);
     }
 
     public Long getOrWait(String appName, long millis) {
         // waits for change of app A or x seconds
         return eventStream
-                .filter(se -> se.equals(appName))
+                .filter(se -> se.getName().equals(appName))
                 .timeout(millis, TimeUnit.MILLISECONDS)
-                .onErrorReturn(err -> mapErrorToAppChange(err, Optional.of(appName)))
-                .map(se -> changeCounter.getChangeCount(se))
+                .onErrorReturn(err -> mapTimeoutToServiceChange(err, Optional.of(appName)))
+                .map(se -> getLastEmittedOfApp(se.getName()))
                 .toBlocking()
                 .first();
     }
@@ -66,17 +75,45 @@ public class ServiceChangeDetector {
         // waits for change or x seconds
         return eventStream
                 .timeout(millis, TimeUnit.MILLISECONDS)
-                .onErrorReturn(err -> mapErrorToAppChange(err, Optional.empty()))
-                .map(se -> changeCounter.getTotalCount())
+                .onErrorReturn(err -> mapTimeoutToServiceChange(err, Optional.empty()))
+                .map(se -> getLastEmitted())
                 .toBlocking()
                 .first();
     }
 
-    private String mapErrorToAppChange(Throwable err, Optional<String> appName){
+    public Long getLastEmitted() {
+        // get highest change counter of all apps
+        Long lastEmitted = changeCounters.values().stream().mapToLong(AtomicLong::get).max().orElse(INITIAL_VALUE);
+        if (log.isDebugEnabled()) {
+            log.debug("Last emitted change counter of services {}", lastEmitted);
+        }
+        return lastEmitted;
+    }
+
+    public Long getLastEmittedOfApp(String appName) {
+        // get change counter of app A
+        long lastEmittedOfApp = changeCounters.getOrDefault(appName, new AtomicLong(INITIAL_VALUE)).longValue();
+        if (log.isDebugEnabled()) {
+            log.debug("Last emitted change counter of service {}: {}", appName, lastEmittedOfApp);
+        }
+        return lastEmittedOfApp;
+    }
+
+    public void reset() {
+        changeCounters.clear();
+    }
+
+    private ServiceChange mapTimeoutToServiceChange(Throwable err, Optional<String> appName){
         if (err instanceof TimeoutException) {
-            return "";
+            return new ServiceChange(appName.orElse(""), -1);
         }
         throw new RuntimeException(err.getMessage(), err);
     }
 
+    @AllArgsConstructor
+    @Getter
+    private static class ServiceChange {
+        private String name;
+        private long timestamp;
+    }
 }
