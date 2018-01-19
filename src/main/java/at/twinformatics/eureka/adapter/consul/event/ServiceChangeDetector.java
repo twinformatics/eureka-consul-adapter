@@ -26,6 +26,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import rx.Observable;
 import rx.subjects.PublishSubject;
 
 import java.util.Collections;
@@ -60,25 +61,21 @@ public class ServiceChangeDetector {
         eventStream.onNext(change);
     }
 
-    public Long getOrWait(String appName, long millis) {
+    public Observable<Long> getIndexOfApp(String appName, long millis) {
         // waits for change of app A or x seconds
         return eventStream
                 .filter(se -> se.getName().equals(appName))
                 .timeout(millis, TimeUnit.MILLISECONDS)
                 .onErrorReturn(err -> mapTimeoutToServiceChange(err, Optional.of(appName)))
-                .map(se -> getLastEmittedOfApp(se.getName()))
-                .toBlocking()
-                .first();
+                .map(se -> getLastEmittedOfApp(se.getName()));
     }
 
-    public Long getOrWait(long millis) {
+    public Observable<Long> getTotalIndex(long millis) {
         // waits for change or x seconds
         return eventStream
                 .timeout(millis, TimeUnit.MILLISECONDS)
                 .onErrorReturn(err -> mapTimeoutToServiceChange(err, Optional.empty()))
-                .map(se -> getLastEmitted())
-                .toBlocking()
-                .first();
+                .map(se -> getLastEmitted());
     }
 
     public Long getLastEmitted() {

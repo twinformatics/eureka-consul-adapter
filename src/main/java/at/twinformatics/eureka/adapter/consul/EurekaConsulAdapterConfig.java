@@ -27,19 +27,27 @@ import at.twinformatics.eureka.adapter.consul.controller.ServiceController;
 import at.twinformatics.eureka.adapter.consul.event.RegistrationEventInstanceRegistry;
 import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
 import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.discovery.EurekaClient;
 import com.netflix.discovery.EurekaClientConfig;
 import com.netflix.eureka.EurekaServerConfig;
 import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import com.netflix.eureka.resources.ServerCodecs;
+import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cloud.netflix.eureka.server.InstanceRegistryProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.scheduling.annotation.AsyncConfigurer;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.util.Assert;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+
 @Configuration
+@EnableAsync
 public class EurekaConsulAdapterConfig {
 
     @Bean

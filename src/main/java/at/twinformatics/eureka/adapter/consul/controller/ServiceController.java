@@ -33,12 +33,18 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.ResponseBody;
+import rx.Observable;
+import rx.Single;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.QueryParam;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -51,6 +57,10 @@ import static java.util.stream.Collectors.toMap;
 @RequiredArgsConstructor
 @Slf4j
 public class ServiceController {
+
+    private static final BinaryOperator<String[]> mergeFunction = (u, v) -> {
+        throw new IllegalStateException(String.format("Duplicate key %s", u));
+    };
 
     private static final String CONSUL_IDX_HEADER = "X-Consul-Index";
 
@@ -66,28 +76,25 @@ public class ServiceController {
     private final ServiceMapper serviceMapper;
 
     @GetMapping(value = "/v1/catalog/services", produces = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
-    public Map<String, String[]> getServiceNames(@QueryParam(QUERY_PARAM_WAIT) String wait,
-                                                 @QueryParam(QUERY_PARAM_INDEX) Long index,
-                                                 HttpServletResponse response) {
+    public Single<Map<String, String[]>> getServiceNames(@QueryParam(QUERY_PARAM_WAIT) String wait,
+                                                         @QueryParam(QUERY_PARAM_INDEX) Long index,
+                                                         HttpServletResponse response) {
 
-        return blockUntilChangeOrTimeout(wait, index, response, serviceChangeDetector::getLastEmitted,
-                serviceChangeDetector::getOrWait,
+
+        return returnDeferred(wait, index, response, serviceChangeDetector::getLastEmitted,
+                serviceChangeDetector::getTotalIndex,
                 () -> registry.getApplications().getRegisteredApplications().stream()
-                        .collect(toMap(Application::getName, a -> NO_SERVICE_TAGS,
-                                (u,v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
-                                TreeMap::new)));
+                        .collect(toMap(Application::getName, a -> NO_SERVICE_TAGS, mergeFunction, TreeMap::new)));
     }
 
     @GetMapping(value = "/v1/catalog/service/{appName}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
-    public List<Service> getServices(@PathVariable("appName") String appName,
-                                     @QueryParam(QUERY_PARAM_WAIT) String wait,
-                                     @QueryParam(QUERY_PARAM_INDEX) Long index,
-                                     HttpServletResponse response) {
+    public Single<List<Service>> getService(@PathVariable("appName") String appName,
+                                            @QueryParam(QUERY_PARAM_WAIT) String wait,
+                                            @QueryParam(QUERY_PARAM_INDEX) Long index,
+                                            HttpServletResponse response) {
 
-        return blockUntilChangeOrTimeout(wait, index, response, () -> serviceChangeDetector.getLastEmittedOfApp(appName),
-                waitMillis -> serviceChangeDetector.getOrWait(appName, waitMillis),
+        return returnDeferred(wait, index, response, () -> serviceChangeDetector.getLastEmittedOfApp(appName),
+                waitMillis -> serviceChangeDetector.getIndexOfApp(appName, waitMillis),
                 () -> {
                     Application application = registry.getApplication(appName);
                     if (application == null) {
@@ -98,16 +105,17 @@ public class ServiceController {
                 });
     }
 
-    <T> T blockUntilChangeOrTimeout(String wait, Long index, HttpServletResponse response,
-                                    Supplier<Long> lastEmitted, Function<Long, Long> waitOrGet,
-                                    Supplier<T> fn) {
+    <T> Single<T> returnDeferred(String wait, Long index, HttpServletResponse response,
+                                 Supplier<Long> lastEmitted, Function<Long, Observable<Long>> supplyObservable,
+                                 Supplier<T> fn) {
         if (index == null || lastEmitted.get() > index) {
             response.setHeader(CONSUL_IDX_HEADER, String.valueOf(lastEmitted.get()));
-            return fn.get();
+            return Single.just(fn.get());
         } else {
-            Long newIndex = waitOrGet.apply(getWaitMillis(wait));
-            response.setHeader(CONSUL_IDX_HEADER, String.valueOf(newIndex));
-            return fn.get();
+            Observable<Long> newIndex = supplyObservable.apply(getWaitMillis(wait));
+            return newIndex.doOnEach(idx -> response.setHeader(CONSUL_IDX_HEADER, String.valueOf(idx)))
+                    .map(idx -> fn.get())
+                    .toSingle();
         }
     }
 

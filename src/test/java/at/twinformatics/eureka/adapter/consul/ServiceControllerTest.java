@@ -320,7 +320,7 @@ public class ServiceControllerTest {
     }
 
     @Test(timeout = 3000)
-    public void services_eventInterruptsRequestError_isResolved() throws Exception {
+    public void service_eventInterruptsRequestError_isResolved() throws Exception {
 
 
         Applications applications = mock2Applications();
