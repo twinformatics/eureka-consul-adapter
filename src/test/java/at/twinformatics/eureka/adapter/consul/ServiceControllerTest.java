@@ -85,7 +85,7 @@ public class ServiceControllerTest {
     }
 
     @Test
-    public void getNoServices() throws Exception {
+    public void services_noServices_emptyObj() throws Exception {
 
         when(registry.getApplications()).thenReturn(new Applications());
 
@@ -96,7 +96,7 @@ public class ServiceControllerTest {
     }
 
     @Test
-    public void getServices() throws Exception {
+    public void services_1Service_serviceObj() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
@@ -109,7 +109,7 @@ public class ServiceControllerTest {
     }
 
     @Test
-    public void getServicesTimeout() throws Exception {
+    public void services_syncChangesToMs1_interruptOnChange() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
@@ -148,7 +148,7 @@ public class ServiceControllerTest {
     }
 
     @Test(timeout = 10000)
-    public void getServicesTimeoutWithChange() throws Exception {
+    public void services_asyncChangesToMs1_interruptOnChange() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
@@ -177,7 +177,7 @@ public class ServiceControllerTest {
     }
 
     @Test(timeout = 10000)
-    public void get2ServicesTimeoutWithChange() throws Exception {
+    public void services_asyncChangesToMs1AndMs2_interruptOnChange() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
@@ -219,7 +219,7 @@ public class ServiceControllerTest {
     }
 
     @Test
-    public void getService() throws Exception {
+    public void service_sampleService_jsonObject() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
@@ -272,7 +272,7 @@ public class ServiceControllerTest {
     }
 
     @Test(timeout = 10000)
-    public void getServiceTimeoutWithChange() throws Exception {
+    public void service_serviceChangesToOtherServices_interruptOnCorrectService() throws Exception {
 
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
