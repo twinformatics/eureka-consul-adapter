@@ -29,8 +29,12 @@ import com.netflix.discovery.shared.Application;
 import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import rx.Observable;
@@ -76,7 +80,7 @@ public class ServiceController {
     private final ServiceMapper serviceMapper;
 
     @GetMapping(value = "/v1/catalog/services", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Single<Map<String, String[]>> getServiceNames(@QueryParam(QUERY_PARAM_WAIT) String wait,
+    public Single<ResponseEntity<Map<String, String[]>>> getServiceNames(@QueryParam(QUERY_PARAM_WAIT) String wait,
                                                          @QueryParam(QUERY_PARAM_INDEX) Long index,
                                                          HttpServletResponse response) {
 
@@ -88,7 +92,7 @@ public class ServiceController {
     }
 
     @GetMapping(value = "/v1/catalog/service/{appName}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Single<List<Service>> getService(@PathVariable("appName") String appName,
+    public Single<ResponseEntity<List<Service>>> getService(@PathVariable("appName") String appName,
                                             @QueryParam(QUERY_PARAM_WAIT) String wait,
                                             @QueryParam(QUERY_PARAM_INDEX) Long index,
                                             HttpServletResponse response) {
@@ -105,17 +109,19 @@ public class ServiceController {
                 });
     }
 
-    <T> Single<T> returnDeferred(String wait, Long index, HttpServletResponse response,
-                                 Supplier<Long> lastEmitted, Function<Long, Observable<Long>> supplyObservable,
-                                 Supplier<T> fn) {
+    <T> Single<ResponseEntity<T>> returnDeferred(String wait, Long index, HttpServletResponse response,
+                                                Supplier<Long> lastEmitted, Function<Long, Observable<Long>> supplyObservable,
+                                                Supplier<T> fn) {
+        MultiValueMap<String,String> headers= new LinkedMultiValueMap<>();
         if (index == null || lastEmitted.get() > index) {
-            response.setHeader(CONSUL_IDX_HEADER, String.valueOf(lastEmitted.get()));
-            return Single.just(fn.get());
+            headers.add(CONSUL_IDX_HEADER, String.valueOf(lastEmitted.get()));
+            return Single.just(new ResponseEntity(fn.get(), headers, HttpStatus.OK));
         } else {
             Observable<Long> newIndex = supplyObservable.apply(getWaitMillis(wait));
-            return newIndex.doOnEach(idx -> response.setHeader(CONSUL_IDX_HEADER, String.valueOf(idx)))
-                    .map(idx -> fn.get())
-                    .toSingle();
+            return newIndex.map(idx -> {
+                headers.add(CONSUL_IDX_HEADER, String.valueOf(idx));
+                return new ResponseEntity<>(fn.get(), headers, HttpStatus.OK);
+            }).first().toSingle();
         }
     }
 

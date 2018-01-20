@@ -38,8 +38,12 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cloud.netflix.rx.SingleReturnValueHandler;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -53,15 +57,18 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Slf4j
 @RunWith(SpringRunner.class)
 @WebMvcTest(controllers = {ServiceController.class, ServiceChangeDetector.class, ServiceMapper.class})
 public class ServiceControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
     @MockBean
@@ -70,12 +77,18 @@ public class ServiceControllerTest {
     @Autowired
     private ServiceChangeDetector serviceChangeDetector;
 
+    @Autowired
+    private ServiceController controller;
+
     private ExecutorService executorService1;
 
     @Before
     public void setUp() {
         executorService1 = Executors.newSingleThreadExecutor();
         serviceChangeDetector.reset();
+
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setCustomReturnValueHandlers(new SingleReturnValueHandler()).build();
     }
 
     @After
@@ -89,8 +102,7 @@ public class ServiceControllerTest {
 
         when(registry.getApplications()).thenReturn(new Applications());
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=1ms"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/services?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(content().string("{}"));
     }
@@ -101,8 +113,7 @@ public class ServiceControllerTest {
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=1ms"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/services?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2", is(new JSONArray())));
@@ -114,8 +125,7 @@ public class ServiceControllerTest {
         Applications applications = mock2Applications();
         when(registry.getApplications()).thenReturn(applications);
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=1ms"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/services?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "1"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
@@ -123,15 +133,13 @@ public class ServiceControllerTest {
 
         serviceChangeDetector.publish("ms1", 2);
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=1ms&index=1"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/services?wait=1ms&index=1")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "2"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2", is(new JSONArray())));
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=1ms&index=2"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/services?wait=1ms&index=2")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "2"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
@@ -139,12 +147,19 @@ public class ServiceControllerTest {
 
         serviceChangeDetector.publish("ms1", 3);
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=1ms&index=2"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/services?wait=1ms&index=2")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "3"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+    }
+
+    private ResultActions performAsync(String url) throws Exception {
+        MvcResult mvcResult = this.mockMvc.perform(get(url))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return this.mockMvc.perform(asyncDispatch(mvcResult));
     }
 
     @Test(timeout = 10000)
@@ -160,15 +175,13 @@ public class ServiceControllerTest {
             serviceChangeDetector.publish("ms1", 3);
         });
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=30s"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/services?wait=30s")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "1"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2", is(new JSONArray())));
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=30s&index=1"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/services?wait=30s&index=1")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "2"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
@@ -195,22 +208,19 @@ public class ServiceControllerTest {
             sleepFor(1000);
         });
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=30s"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/services?wait=30s")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "1"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2", is(new JSONArray())));
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=30s&index=1"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/services?wait=30s&index=1")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "2"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2", is(new JSONArray())));
 
-        this.mockMvc.perform(get("/v1/catalog/services?wait=30s&index=2"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/services?wait=30s&index=2")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "4"))
                 .andExpect(jsonPath("$.ms1", is(new JSONArray())))
@@ -230,8 +240,7 @@ public class ServiceControllerTest {
 
         when(registry.getApplication("ms1")).thenReturn(ms1);
 
-        this.mockMvc.perform(get("/v1/catalog/service/ms1?wait=1ms"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/service/ms1?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(jsonPath("$[0].Address", is("1.2.3.4")))
                 .andExpect(jsonPath("$[0].Node", is("ms1")))
@@ -250,8 +259,7 @@ public class ServiceControllerTest {
 
         ms1.addInstance(instance2);
 
-        this.mockMvc.perform(get("/v1/catalog/service/ms1?wait=1ms"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/service/ms1?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(jsonPath("$[0].Address", is("1.2.3.4")))
                 .andExpect(jsonPath("$[0].Node", is("ms1")))
@@ -295,23 +303,20 @@ public class ServiceControllerTest {
             serviceChangeDetector.publish("ms1", 3);
         });
 
-        this.mockMvc.perform(get("/v1/catalog/service/ms1?wait=30s"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/service/ms1?wait=30s")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "1"))
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(jsonPath("$[0].Address", is("1.2.3.4")));
 
-        this.mockMvc.perform(get("/v1/catalog/service/ms1?wait=30s&index=1"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/service/ms1?wait=30s&index=1")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "2"))
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(jsonPath("$[0].Address", is("1.2.3.4")));
 
 
-        this.mockMvc.perform(get("/v1/catalog/service/ms1?wait=30s&index=2"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/service/ms1?wait=30s&index=2")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "3"))
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
@@ -345,8 +350,7 @@ public class ServiceControllerTest {
         });
 
         long t1 = System.currentTimeMillis();
-        this.mockMvc.perform(get("/v1/catalog/service/ms1?wait=2s&index=1"))
-                .andExpect(status().isOk())
+        performAsync("/v1/catalog/service/ms1?wait=2s&index=1")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "1"))
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
