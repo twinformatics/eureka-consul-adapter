@@ -1,17 +1,17 @@
 /**
  * The MIT License
  * Copyright © 2018 Twinformatics GmbH
- *
+ * <p>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * <p>
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
+ * <p>
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -53,8 +53,8 @@ import static java.util.stream.Collectors.toMap;
 @Slf4j
 public class RegistrationService {
 
-    private static final BinaryOperator<String[]> MERGE_FUNCTION = (u, v) -> {
-        throw new IllegalStateException(String.format("Duplicate key %s", u));
+    private static final BinaryOperator<String[]> MERGE_FUNCTION = (u,v) -> {
+        throw new IllegalStateException("Duplicate key");
     };
 
     private static final String[] NO_SERVICE_TAGS = new String[0];
@@ -69,7 +69,7 @@ public class RegistrationService {
                         .collect(toMap(Application::getName, a -> NO_SERVICE_TAGS, MERGE_FUNCTION, TreeMap::new)));
     }
 
-    public Single<ChangeItem<List<InstanceInfo>>> getService(String appName, long waitMillis, Long index ) {
+    public Single<ChangeItem<List<InstanceInfo>>> getService(String appName, long waitMillis, Long index) {
 
         return returnDeferred(waitMillis, index, () -> serviceChangeDetector.getLastEmittedOfApp(appName),
                 waitMillisInternal -> serviceChangeDetector.getIndexOfApp(appName, waitMillisInternal),
@@ -84,10 +84,10 @@ public class RegistrationService {
     }
 
     private <T> Single<ChangeItem<T>> returnDeferred(long waitMillis, Long index,
-                                             Supplier<Long> lastEmitted, Function<Long, Observable<Long>> supplyObservable,
-                                             Supplier<T> fn) {
+                                                     Supplier<Long> lastEmitted, Function<Long, Observable<Long>> supplyObservable,
+                                                     Supplier<T> fn) {
         MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
-        if (index == null || lastEmitted.get() > index) {
+        if (index == null || !lastEmitted.get().equals(index)) {
             return Single.just(new ChangeItem<>(fn.get(), lastEmitted.get()));
         } else {
             return supplyObservable.apply(waitMillis)
