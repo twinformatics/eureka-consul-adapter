@@ -22,8 +22,9 @@
  */
 package at.twinformatics.eureka.adapter.consul.controller;
 
-import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
-import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
+import at.twinformatics.eureka.adapter.consul.service.RegistrationService;
+import at.twinformatics.eureka.adapter.consul.service.ServiceChangeDetector;
+import at.twinformatics.eureka.adapter.consul.mapper.InstanceInfoMapper;
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.discovery.shared.Application;
 import com.netflix.discovery.shared.Applications;
@@ -62,7 +63,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @Slf4j
 @RunWith(SpringRunner.class)
-@WebMvcTest(controllers = {ServiceController.class, ServiceChangeDetector.class, ServiceMapper.class})
+@WebMvcTest(controllers = {ServiceController.class, ServiceChangeDetector.class, InstanceInfoMapper.class,
+        RegistrationService.class})
 public class ServiceControllerTest {
 
     private MockMvc mockMvc;

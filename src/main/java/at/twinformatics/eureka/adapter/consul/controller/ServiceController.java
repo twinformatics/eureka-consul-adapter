@@ -22,49 +22,36 @@
  */
 package at.twinformatics.eureka.adapter.consul.controller;
 
-import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
-import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
+import at.twinformatics.eureka.adapter.consul.mapper.InstanceInfoMapper;
 import at.twinformatics.eureka.adapter.consul.model.Service;
-import com.netflix.discovery.shared.Application;
-import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
+import at.twinformatics.eureka.adapter.consul.service.RegistrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import rx.Observable;
 import rx.Single;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.QueryParam;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 
 @Controller
 @RequiredArgsConstructor
 @Slf4j
 public class ServiceController {
-
-    private static final BinaryOperator<String[]> mergeFunction = (u, v) -> {
-        throw new IllegalStateException(String.format("Duplicate key %s", u));
-    };
 
     private static final String CONSUL_IDX_HEADER = "X-Consul-Index";
 
@@ -73,63 +60,44 @@ public class ServiceController {
 
     private static final Pattern WAIT_PATTERN = Pattern.compile("(\\d*)(m|s|ms|h)");
     private static final Random RANDOM = new Random();
-    private static final String[] NO_SERVICE_TAGS = new String[0];
 
-    private final PeerAwareInstanceRegistry registry;
-    private final ServiceChangeDetector serviceChangeDetector;
-    private final ServiceMapper serviceMapper;
+    private final RegistrationService registrationService;
+    private final InstanceInfoMapper instanceInfoMapper;
 
     @GetMapping(value = "/v1/catalog/services", produces = MediaType.APPLICATION_JSON_VALUE)
     public Single<ResponseEntity<Map<String, String[]>>> getServiceNames(@QueryParam(QUERY_PARAM_WAIT) String wait,
-                                                         @QueryParam(QUERY_PARAM_INDEX) Long index,
-                                                         HttpServletResponse response) {
-
-
-        return returnDeferred(wait, index, response, serviceChangeDetector::getLastEmitted,
-                serviceChangeDetector::getTotalIndex,
-                () -> registry.getApplications().getRegisteredApplications().stream()
-                        .collect(toMap(Application::getName, a -> NO_SERVICE_TAGS, mergeFunction, TreeMap::new)));
+                                                                         @QueryParam(QUERY_PARAM_INDEX) Long index) {
+        return registrationService.getServiceNames(getWaitMillis(wait), index)
+                .map(item -> createResponseEntity(item.getItem(), item.getChangeIndex()));
     }
 
     @GetMapping(value = "/v1/catalog/service/{appName}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Single<ResponseEntity<List<Service>>> getService(@PathVariable("appName") String appName,
-                                            @QueryParam(QUERY_PARAM_WAIT) String wait,
-                                            @QueryParam(QUERY_PARAM_INDEX) Long index,
-                                            HttpServletResponse response) {
-
-        return returnDeferred(wait, index, response, () -> serviceChangeDetector.getLastEmittedOfApp(appName),
-                waitMillis -> serviceChangeDetector.getIndexOfApp(appName, waitMillis),
-                () -> {
-                    Application application = registry.getApplication(appName);
-                    if (application == null) {
-                        return Collections.emptyList();
-                    } else {
-                        return application.getInstances().stream().map(serviceMapper::map).collect(toList());
-                    }
+                                                            @QueryParam(QUERY_PARAM_WAIT) String wait,
+                                                            @QueryParam(QUERY_PARAM_INDEX) Long index) {
+        Assert.isTrue(appName != null, "service name can not be null");
+        return registrationService.getService(appName, getWaitMillis(wait), index)
+                .map(item -> {
+                    List<Service> services = item.getItem().stream().map(instanceInfoMapper::map).collect(toList());
+                    return createResponseEntity(services, item.getChangeIndex());
                 });
     }
 
-    <T> Single<ResponseEntity<T>> returnDeferred(String wait, Long index, HttpServletResponse response,
-                                                Supplier<Long> lastEmitted, Function<Long, Observable<Long>> supplyObservable,
-                                                Supplier<T> fn) {
-        MultiValueMap<String,String> headers= new LinkedMultiValueMap<>();
-        if (index == null || lastEmitted.get() > index) {
-            headers.add(CONSUL_IDX_HEADER, String.valueOf(lastEmitted.get()));
-            return Single.just(new ResponseEntity(fn.get(), headers, HttpStatus.OK));
-        } else {
-            Observable<Long> newIndex = supplyObservable.apply(getWaitMillis(wait));
-            return newIndex.map(idx -> {
-                headers.add(CONSUL_IDX_HEADER, String.valueOf(idx));
-                return new ResponseEntity<>(fn.get(), headers, HttpStatus.OK);
-            }).first().toSingle();
-        }
+    private MultiValueMap<String, String> createHeaders(long index) {
+        MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
+        headers.add(CONSUL_IDX_HEADER, "" + index);
+        return headers;
+    }
+
+    private <T> ResponseEntity<T> createResponseEntity(T body, long index) {
+        return new ResponseEntity<>(body, createHeaders(index), HttpStatus.OK);
     }
 
     /**
      * Details to the wait behaviour can be found
      * https://www.consul.io/api/index.html#blocking-queries
      */
-    long getWaitMillis(String wait) {
+    private long getWaitMillis(String wait) {
         // default from consul docu
         long millis = TimeUnit.MINUTES.toMillis(5);
         if (wait != null) {
@@ -145,7 +113,7 @@ public class ServiceController {
         return millis + RANDOM.nextInt(((int) millis / 16) + 1);
     }
 
-    TimeUnit parseTimeUnit(String unit) {
+    private TimeUnit parseTimeUnit(String unit) {
         switch (unit) {
             case "h":
                 return TimeUnit.HOURS;

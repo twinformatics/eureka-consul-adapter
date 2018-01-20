@@ -24,27 +24,22 @@ package at.twinformatics.eureka.adapter.consul;
 
 import at.twinformatics.eureka.adapter.consul.controller.AgentController;
 import at.twinformatics.eureka.adapter.consul.controller.ServiceController;
-import at.twinformatics.eureka.adapter.consul.event.RegistrationEventInstanceRegistry;
-import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
-import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import at.twinformatics.eureka.adapter.consul.service.RegistrationEventInstanceRegistry;
+import at.twinformatics.eureka.adapter.consul.service.RegistrationService;
+import at.twinformatics.eureka.adapter.consul.service.ServiceChangeDetector;
+import at.twinformatics.eureka.adapter.consul.mapper.InstanceInfoMapper;
 import com.netflix.discovery.EurekaClient;
 import com.netflix.discovery.EurekaClientConfig;
 import com.netflix.eureka.EurekaServerConfig;
 import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import com.netflix.eureka.resources.ServerCodecs;
-import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cloud.netflix.eureka.server.InstanceRegistryProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.util.Assert;
-
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 @Configuration
 @EnableAsync
@@ -58,10 +53,8 @@ public class EurekaConsulAdapterConfig {
 
     @Bean
     @ConditionalOnMissingBean
-    public ServiceController serviceController(PeerAwareInstanceRegistry peerAwareInstanceRegistry) {
-        Assert.isTrue(peerAwareInstanceRegistry instanceof RegistrationEventInstanceRegistry,
-                "Instance Registry must be of type" + RegistrationEventInstanceRegistry.class.getName());
-        return new ServiceController(peerAwareInstanceRegistry, serviceChangeDetector(), serviceMapper());
+    public ServiceController serviceController(RegistrationService registrationService) {
+        return new ServiceController(registrationService, serviceMapper());
     }
 
     @Bean
@@ -79,8 +72,16 @@ public class EurekaConsulAdapterConfig {
 
     @Bean
     @ConditionalOnMissingBean
-    public ServiceMapper serviceMapper() {
-        return new ServiceMapper();
+    public InstanceInfoMapper serviceMapper() {
+        return new InstanceInfoMapper();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public RegistrationService registrationService(PeerAwareInstanceRegistry peerAwareInstanceRegistry) {
+        Assert.isTrue(peerAwareInstanceRegistry instanceof RegistrationEventInstanceRegistry,
+                "Instance Registry must be of type" + RegistrationEventInstanceRegistry.class.getName());
+        return new RegistrationService(peerAwareInstanceRegistry, serviceChangeDetector());
     }
 
     @Bean

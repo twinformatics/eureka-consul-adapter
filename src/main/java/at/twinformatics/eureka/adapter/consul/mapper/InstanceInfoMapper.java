@@ -33,7 +33,7 @@ import java.util.List;
 import static com.netflix.appinfo.InstanceInfo.PortType.SECURE;
 
 @Component
-public class ServiceMapper {
+public class InstanceInfoMapper {
 
     private static final List<String> NO_SERVICE_TAGS = new ArrayList<>();
 

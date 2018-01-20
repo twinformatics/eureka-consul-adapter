@@ -20,7 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package at.twinformatics.eureka.adapter.consul.event;
+package at.twinformatics.eureka.adapter.consul.service;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -32,7 +32,6 @@ import rx.subjects.PublishSubject;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -66,7 +65,7 @@ public class ServiceChangeDetector {
         return eventStream
                 .filter(se -> se.getName().equals(appName))
                 .timeout(millis, TimeUnit.MILLISECONDS)
-                .onErrorReturn(err -> mapTimeoutToServiceChange(err, Optional.of(appName)))
+                .onErrorReturn(err -> mapTimeoutToServiceChange(err, appName))
                 .map(se -> getLastEmittedOfApp(se.getName()));
     }
 
@@ -74,7 +73,7 @@ public class ServiceChangeDetector {
         // waits for change or x seconds
         return eventStream
                 .timeout(millis, TimeUnit.MILLISECONDS)
-                .onErrorReturn(err -> mapTimeoutToServiceChange(err, Optional.empty()))
+                .onErrorReturn(err -> mapTimeoutToServiceChange(err, ""))
                 .map(se -> getLastEmitted());
     }
 
@@ -100,9 +99,9 @@ public class ServiceChangeDetector {
         changeCounters.clear();
     }
 
-    private ServiceChange mapTimeoutToServiceChange(Throwable err, Optional<String> appName){
+    private ServiceChange mapTimeoutToServiceChange(Throwable err, String appName){
         if (err instanceof TimeoutException) {
-            return new ServiceChange(appName.orElse(""), -1);
+            return new ServiceChange(appName, -1);
         }
         throw new RuntimeException(err.getMessage(), err);
     }
