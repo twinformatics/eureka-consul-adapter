@@ -20,9 +20,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package at.twinformatics.eureka.adapter.consul;
+package at.twinformatics.eureka.adapter.consul.controller;
 
-import at.twinformatics.eureka.adapter.consul.controller.ServiceController;
 import at.twinformatics.eureka.adapter.consul.event.ServiceChangeDetector;
 import at.twinformatics.eureka.adapter.consul.mapper.ServiceMapper;
 import com.netflix.appinfo.InstanceInfo;
@@ -31,10 +30,13 @@ import com.netflix.discovery.shared.Applications;
 import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import lombok.extern.slf4j.Slf4j;
 import net.minidev.json.JSONArray;
+import org.hamcrest.Matchers;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -51,12 +53,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -100,7 +96,7 @@ public class ServiceControllerTest {
     @Test
     public void services_noServices_emptyObj() throws Exception {
 
-        when(registry.getApplications()).thenReturn(new Applications());
+        Mockito.when(registry.getApplications()).thenReturn(new Applications());
 
         performAsync("/v1/catalog/services?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
@@ -111,47 +107,47 @@ public class ServiceControllerTest {
     public void services_1Service_serviceObj() throws Exception {
 
         Applications applications = mock2Applications();
-        when(registry.getApplications()).thenReturn(applications);
+        Mockito.when(registry.getApplications()).thenReturn(applications);
 
         performAsync("/v1/catalog/services?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
-                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+                .andExpect(jsonPath("$.ms1", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$.ms2", Matchers.is(new JSONArray())));
     }
 
     @Test
     public void services_syncChangesToMs1_interruptOnChange() throws Exception {
 
         Applications applications = mock2Applications();
-        when(registry.getApplications()).thenReturn(applications);
+        Mockito.when(registry.getApplications()).thenReturn(applications);
 
         performAsync("/v1/catalog/services?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "1"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
-                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+                .andExpect(jsonPath("$.ms1", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$.ms2", Matchers.is(new JSONArray())));
 
         serviceChangeDetector.publish("ms1", 2);
 
         performAsync("/v1/catalog/services?wait=1ms&index=1")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "2"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
-                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+                .andExpect(jsonPath("$.ms1", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$.ms2", Matchers.is(new JSONArray())));
 
         performAsync("/v1/catalog/services?wait=1ms&index=2")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "2"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
-                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+                .andExpect(jsonPath("$.ms1", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$.ms2", Matchers.is(new JSONArray())));
 
         serviceChangeDetector.publish("ms1", 3);
 
         performAsync("/v1/catalog/services?wait=1ms&index=2")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "3"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
-                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+                .andExpect(jsonPath("$.ms1", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$.ms2", Matchers.is(new JSONArray())));
     }
 
     private ResultActions performAsync(String url) throws Exception {
@@ -166,7 +162,7 @@ public class ServiceControllerTest {
     public void services_asyncChangesToMs1_interruptOnChange() throws Exception {
 
         Applications applications = mock2Applications();
-        when(registry.getApplications()).thenReturn(applications);
+        Mockito.when(registry.getApplications()).thenReturn(applications);
 
         startThread(() -> {
             sleepFor(1000);
@@ -178,14 +174,14 @@ public class ServiceControllerTest {
         performAsync("/v1/catalog/services?wait=30s")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "1"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
-                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+                .andExpect(jsonPath("$.ms1", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$.ms2", Matchers.is(new JSONArray())));
 
         performAsync("/v1/catalog/services?wait=30s&index=1")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "2"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
-                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+                .andExpect(jsonPath("$.ms1", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$.ms2", Matchers.is(new JSONArray())));
 
     }
 
@@ -193,7 +189,7 @@ public class ServiceControllerTest {
     public void services_asyncChangesToMs1AndMs2_interruptOnChange() throws Exception {
 
         Applications applications = mock2Applications();
-        when(registry.getApplications()).thenReturn(applications);
+        Mockito.when(registry.getApplications()).thenReturn(applications);
 
         startThread(() -> {
             sleepFor(1000);
@@ -202,7 +198,7 @@ public class ServiceControllerTest {
 
             Applications newApplications = new Applications();
             newApplications.addApplication(new Application("ms1"));
-            when(registry.getApplications()).thenReturn(newApplications);
+            Mockito.when(registry.getApplications()).thenReturn(newApplications);
 
             serviceChangeDetector.publish("ms2", 4);
             sleepFor(1000);
@@ -211,19 +207,19 @@ public class ServiceControllerTest {
         performAsync("/v1/catalog/services?wait=30s")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "1"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
-                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+                .andExpect(jsonPath("$.ms1", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$.ms2", Matchers.is(new JSONArray())));
 
         performAsync("/v1/catalog/services?wait=30s&index=1")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "2"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
-                .andExpect(jsonPath("$.ms2", is(new JSONArray())));
+                .andExpect(jsonPath("$.ms1", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$.ms2", Matchers.is(new JSONArray())));
 
         performAsync("/v1/catalog/services?wait=30s&index=2")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "4"))
-                .andExpect(jsonPath("$.ms1", is(new JSONArray())))
+                .andExpect(jsonPath("$.ms1", Matchers.is(new JSONArray())))
                 .andExpect(jsonPath("$.ms2").doesNotExist());
 
     }
@@ -232,64 +228,64 @@ public class ServiceControllerTest {
     public void service_sampleService_jsonObject() throws Exception {
 
         Applications applications = mock2Applications();
-        when(registry.getApplications()).thenReturn(applications);
+        Mockito.when(registry.getApplications()).thenReturn(applications);
         Application ms1 = applications.getRegisteredApplications().get(0);
 
         InstanceInfo instance1 = mock1Instance();
         ms1.addInstance(instance1);
 
-        when(registry.getApplication("ms1")).thenReturn(ms1);
+        Mockito.when(registry.getApplication("ms1")).thenReturn(ms1);
 
         performAsync("/v1/catalog/service/ms1?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(jsonPath("$[0].Address", is("1.2.3.4")))
-                .andExpect(jsonPath("$[0].Node", is("ms1")))
-                .andExpect(jsonPath("$[0].ServiceAddress", is("1.2.3.4")))
-                .andExpect(jsonPath("$[0].ServiceID", is("1")))
-                .andExpect(jsonPath("$[0].ServicePort", is(80)))
+                .andExpect(jsonPath("$[0].Address", Matchers.is("1.2.3.4")))
+                .andExpect(jsonPath("$[0].Node", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[0].ServiceAddress", Matchers.is("1.2.3.4")))
+                .andExpect(jsonPath("$[0].ServiceID", Matchers.is("1")))
+                .andExpect(jsonPath("$[0].ServicePort", Matchers.is(80)))
                 .andExpect(jsonPath("$[0].NodeMeta").isEmpty())
-                .andExpect(jsonPath("$[0].ServiceTags", is(new JSONArray())));
+                .andExpect(jsonPath("$[0].ServiceTags", Matchers.is(new JSONArray())));
 
         InstanceInfo instance2 = mock1Instance("2","1.2.3.5", 81, true);
 
         Map<String, String> md = new HashMap<>();
         md.put("k1", "v1");
         md.put("k2", "v2");
-        when(instance2.getMetadata()).thenReturn(md);
+        Mockito.when(instance2.getMetadata()).thenReturn(md);
 
         ms1.addInstance(instance2);
 
         performAsync("/v1/catalog/service/ms1?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(jsonPath("$[0].Address", is("1.2.3.4")))
-                .andExpect(jsonPath("$[0].Node", is("ms1")))
-                .andExpect(jsonPath("$[0].ServiceAddress", is("1.2.3.4")))
-                .andExpect(jsonPath("$[0].ServiceID", is("1")))
-                .andExpect(jsonPath("$[0].ServicePort", is(80)))
+                .andExpect(jsonPath("$[0].Address", Matchers.is("1.2.3.4")))
+                .andExpect(jsonPath("$[0].Node", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[0].ServiceAddress", Matchers.is("1.2.3.4")))
+                .andExpect(jsonPath("$[0].ServiceID", Matchers.is("1")))
+                .andExpect(jsonPath("$[0].ServicePort", Matchers.is(80)))
                 .andExpect(jsonPath("$[0].NodeMeta").isEmpty())
-                .andExpect(jsonPath("$[0].ServiceTags", is(new JSONArray())))
+                .andExpect(jsonPath("$[0].ServiceTags", Matchers.is(new JSONArray())))
 
-                .andExpect(jsonPath("$[1].Address", is("1.2.3.5")))
-                .andExpect(jsonPath("$[1].Node", is("ms1")))
-                .andExpect(jsonPath("$[1].ServiceAddress", is("1.2.3.5")))
-                .andExpect(jsonPath("$[1].ServiceID", is("2")))
-                .andExpect(jsonPath("$[1].ServicePort", is(443)))
-                .andExpect(jsonPath("$[1].NodeMeta.k1", is("v1")))
-                .andExpect(jsonPath("$[1].NodeMeta.k2", is("v2")))
-                .andExpect(jsonPath("$[1].ServiceTags", is(new JSONArray())));
+                .andExpect(jsonPath("$[1].Address", Matchers.is("1.2.3.5")))
+                .andExpect(jsonPath("$[1].Node", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[1].ServiceAddress", Matchers.is("1.2.3.5")))
+                .andExpect(jsonPath("$[1].ServiceID", Matchers.is("2")))
+                .andExpect(jsonPath("$[1].ServicePort", Matchers.is(443)))
+                .andExpect(jsonPath("$[1].NodeMeta.k1", Matchers.is("v1")))
+                .andExpect(jsonPath("$[1].NodeMeta.k2", Matchers.is("v2")))
+                .andExpect(jsonPath("$[1].ServiceTags", Matchers.is(new JSONArray())));
     }
 
     @Test(timeout = 10000)
     public void service_serviceChangesToOtherServices_interruptOnCorrectService() throws Exception {
 
         Applications applications = mock2Applications();
-        when(registry.getApplications()).thenReturn(applications);
+        Mockito.when(registry.getApplications()).thenReturn(applications);
         Application ms1 = applications.getRegisteredApplications().get(0);
 
         InstanceInfo instance1 = mock1Instance();
         ms1.addInstance(instance1);
 
-        when(registry.getApplication("ms1")).thenReturn(ms1);
+        Mockito.when(registry.getApplication("ms1")).thenReturn(ms1);
 
         startThread(() -> {
             sleepFor(1000);
@@ -299,7 +295,7 @@ public class ServiceControllerTest {
             serviceChangeDetector.publish("ms3", 1);
             serviceChangeDetector.publish("ms4", 1);
             sleepFor(500);
-            when(instance1.getIPAddr()).thenReturn("8.8.8.8");
+            Mockito.when(instance1.getIPAddr()).thenReturn("8.8.8.8");
             serviceChangeDetector.publish("ms1", 3);
         });
 
@@ -307,20 +303,20 @@ public class ServiceControllerTest {
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "1"))
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(jsonPath("$[0].Address", is("1.2.3.4")));
+                .andExpect(jsonPath("$[0].Address", Matchers.is("1.2.3.4")));
 
         performAsync("/v1/catalog/service/ms1?wait=30s&index=1")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "2"))
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(jsonPath("$[0].Address", is("1.2.3.4")));
+                .andExpect(jsonPath("$[0].Address", Matchers.is("1.2.3.4")));
 
 
         performAsync("/v1/catalog/service/ms1?wait=30s&index=2")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "3"))
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(jsonPath("$[0].Address", is("8.8.8.8")));
+                .andExpect(jsonPath("$[0].Address", Matchers.is("8.8.8.8")));
 
     }
 
@@ -329,12 +325,12 @@ public class ServiceControllerTest {
 
 
         Applications applications = mock2Applications();
-        when(registry.getApplications()).thenReturn(applications);
+        Mockito.when(registry.getApplications()).thenReturn(applications);
 
         Application ms1 = applications.getRegisteredApplications().get(0);
         InstanceInfo instance1 = mock1Instance();
         ms1.addInstance(instance1);
-        when(registry.getApplication("ms1")).thenReturn(ms1);
+        Mockito.when(registry.getApplication("ms1")).thenReturn(ms1);
 
         startThread(() -> {
             sleepFor(500);
@@ -354,9 +350,9 @@ public class ServiceControllerTest {
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(header().string("X-Consul-Index", "1"))
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(jsonPath("$[0].Address", is("1.2.3.4")));
+                .andExpect(jsonPath("$[0].Address", Matchers.is("1.2.3.4")));
 
-        assertThat(System.currentTimeMillis() - t1, is(greaterThan(2000L)));
+        Assert.assertThat(System.currentTimeMillis() - t1, Matchers.is(Matchers.greaterThan(2000L)));
 
     }
 
@@ -381,13 +377,13 @@ public class ServiceControllerTest {
     }
 
     private InstanceInfo mock1Instance(String id, String ip, int port, boolean securePort) {
-        InstanceInfo instance1 = mock(InstanceInfo.class);
-        when(instance1.getId()).thenReturn(id);
-        when(instance1.getAppName()).thenReturn("ms1");
-        when(instance1.getIPAddr()).thenReturn(ip);
-        when(instance1.getPort()).thenReturn(port);
-        when(instance1.isPortEnabled(InstanceInfo.PortType.SECURE)).thenReturn(securePort);
-        when(instance1.getSecurePort()).thenReturn(443);
+        InstanceInfo instance1 = Mockito.mock(InstanceInfo.class);
+        Mockito.when(instance1.getId()).thenReturn(id);
+        Mockito.when(instance1.getAppName()).thenReturn("ms1");
+        Mockito.when(instance1.getIPAddr()).thenReturn(ip);
+        Mockito.when(instance1.getPort()).thenReturn(port);
+        Mockito.when(instance1.isPortEnabled(InstanceInfo.PortType.SECURE)).thenReturn(securePort);
+        Mockito.when(instance1.getSecurePort()).thenReturn(443);
         return instance1;
     }
 
@@ -395,7 +391,7 @@ public class ServiceControllerTest {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException e) {
-            fail();
+            Assert.fail();
         }
     }
 }

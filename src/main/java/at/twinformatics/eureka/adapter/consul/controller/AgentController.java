@@ -31,6 +31,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.Optional;
+
 @Controller
 @RequiredArgsConstructor
 public class AgentController {
@@ -39,8 +41,7 @@ public class AgentController {
     @ResponseBody
     public Agent getNodes() {
         String dataCenter = ConfigurationManager.getConfigInstance().getString("archaius.deployment.datacenter");
-        return Agent.builder().config(Config.builder()
-                .dataCenter(dataCenter).build())
-                .build();
+        Config config = Config.builder().dataCenter(Optional.ofNullable(dataCenter).orElse("default")).build();
+        return Agent.builder().config(config).build();
     }
 }
