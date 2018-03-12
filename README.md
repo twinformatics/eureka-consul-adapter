@@ -5,17 +5,29 @@ This project contains a Spring Boot Starter that registers HTTP endpoints on a [
 
 # Restrictions
 This adapter _does not support everything_ of [Consul's HTTP API](https://www.consul.io/api/index.html) 
-but only those endpoints and attributes that a required for Prometheus' service discovery mechanism.
+but only those endpoints and attributes that are required for Prometheus' service discovery mechanism.
 
 # Functionality
 
-This starter add the following HTTP endpoints:
+This starter adds the following HTTP endpoints:
 - `/v1/agent/self` Returns the name of the datacenter in use (Consul API: https://www.consul.io/api/agent.html#read-configuration).
 In Eureka, this can be set using the `archaius.deployment.datacenter` configuration property.
 - `/v1/catalog/services` Returns the names of the deployed applications (Consul API: https://www.consul.io/api/catalog.html#list-services). 
 No service tags service will be returned as Eureka does not support this concept.
 - `/v1/catalog/service/{service}` Returns all available details for the particular application 
 (instances, host names, ports, meta data, service tags). No service tags service will be returned as Eureka does not support this concept.
+
+# Long-polling
+
+Consul HTTP API offers long-polling on some of its endpoints. Prometheus' client uses this functionality to get 
+notified about changes in the registry (i.e. service de-/registrations). Prometheus adds the `wait` parameter 
+(e.g. http://service-registry/v1/catalog/service/MY-SERVICE?wait=30000ms ), which causes the response
+to be delayed by specified time passed or returns immediately if the service itself changes within this time range.
+This behaviour has the benefit, that services changes are detected at once whithout have to wait the whole polling interval.
+Prometheus opens one long-polling request for each service. In order not to block one thread for each call, this adapter
+uses the async capabilities of Spring MVC. The default timeout for async requests is by default lower than 30 seconds
+ and can cause `AsyncRequestTimeoutExceptions`. **To prevent this you need to set `spring.mvc.async.request-timeout` to
+ at least 35000 (35 seconds)**.
 
 # How to use this starter
 
