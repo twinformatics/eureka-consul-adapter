@@ -124,6 +124,8 @@
                     <excludes>
                         <exclude>**/README</exclude>
                         <exclude>**/LICENSE</exclude>
+                        <exclude>mvn**</exclude>
+                        <exclude>.mvn/**</exclude>
                         <exclude>src/test/resources/**</exclude>
                         <exclude>src/main/resources/**</exclude>
                     </excludes>
