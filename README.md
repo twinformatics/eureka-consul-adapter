@@ -52,5 +52,13 @@ dependencies {
 # Requirements
 
 - Java 1.8+
-- Spring Boot 1.5 (earlier version might work)
-- Spring Cloud Edgware (earlier version might work)
+
+### Versions 1.x and later
+- Spring Boot 2.0
+- Spring Cloud Finchley
+
+### Versions 0.x
+- Spring Boot 1.5 
+- Spring Cloud Edgware
+
+
