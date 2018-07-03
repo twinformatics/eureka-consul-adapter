@@ -34,7 +34,7 @@ uses the async capabilities of Spring MVC. The default timeout for async request
 Simply add this dependency the your Spring Cloud Eureka Server (https://github.com/spring-cloud-samples/eureka):
 
 ## Maven
-```
+```xml
 <dependency>
   <groupId>at.twinformatics</groupId>
   <artifactId>eureka-consul-adapter</artifactId>
@@ -43,7 +43,7 @@ Simply add this dependency the your Spring Cloud Eureka Server (https://github.c
 ```
 
 ## Gradle
-```
+```groovy
 dependencies {
     compile 'at.twinformatics:eureka-consul-adapter:${eureka-consul-adapter.version}'
 }
