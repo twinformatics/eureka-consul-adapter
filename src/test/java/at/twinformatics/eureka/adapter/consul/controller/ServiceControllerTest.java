@@ -76,6 +76,9 @@ public class ServiceControllerTest {
 
     @Autowired
     private ServiceController controller;
+    
+    @Autowired
+    private InstanceInfoMapper instanceInfoMapper;
 
     private ExecutorService executorService1;
 
@@ -246,7 +249,7 @@ public class ServiceControllerTest {
                 .andExpect(jsonPath("$[0].NodeMeta").isEmpty())
                 .andExpect(jsonPath("$[0].ServiceTags", Matchers.is(new JSONArray())));
 
-        InstanceInfo instance2 = mock1Instance("2","1.2.3.5", 81, true);
+        InstanceInfo instance2 = mock1Instance("2","1.2.3.5", "ms2.com", 81, true);
 
         Map<String, String> md = new HashMap<>();
         md.put("k1", "v1");
@@ -273,6 +276,31 @@ public class ServiceControllerTest {
                 .andExpect(jsonPath("$[1].NodeMeta.k1", Matchers.is("v1")))
                 .andExpect(jsonPath("$[1].NodeMeta.k2", Matchers.is("v2")))
                 .andExpect(jsonPath("$[1].ServiceTags", Matchers.is(new JSONArray())));
+    }
+
+    @Test
+    public void service_sampleService_jsonObject_preferHostName() throws Exception {
+        Applications applications = mock2Applications();
+        Mockito.when(registry.getApplications()).thenReturn(applications);
+        Application ms1 = applications.getRegisteredApplications().get(0);
+
+        InstanceInfo instance1 = mock1Instance();
+        ms1.addInstance(instance1);
+        
+        InstanceInfo instance2 = mock1Instance("2","1.2.3.5", "2.ms1.com", 81, true);
+        ms1.addInstance(instance2);
+
+        Mockito.when(registry.getApplication("ms1")).thenReturn(ms1);
+
+        instanceInfoMapper.setPreferHostName(true);
+                
+        performAsync("/v1/catalog/service/ms1?wait=1ms")
+                .andExpect(content().contentType("application/json;charset=UTF-8"))
+                .andExpect(jsonPath("$[0].Address", Matchers.is("ms1.com")))
+                .andExpect(jsonPath("$[0].ServiceAddress", Matchers.is("ms1.com")))
+
+                .andExpect(jsonPath("$[1].Address", Matchers.is("2.ms1.com")))
+                .andExpect(jsonPath("$[1].ServiceAddress", Matchers.is("2.ms1.com")));
     }
 
     @Test(timeout = 10000)
@@ -373,13 +401,14 @@ public class ServiceControllerTest {
     }
 
     private InstanceInfo mock1Instance() {
-        return mock1Instance("1",  "1.2.3.4",80, false);
+        return mock1Instance("1",  "1.2.3.4", "ms1.com", 80, false);
     }
 
-    private InstanceInfo mock1Instance(String id, String ip, int port, boolean securePort) {
+    private InstanceInfo mock1Instance(String id, String ip, String hostName, int port, boolean securePort) {
         InstanceInfo instance1 = Mockito.mock(InstanceInfo.class);
         Mockito.when(instance1.getId()).thenReturn(id);
         Mockito.when(instance1.getAppName()).thenReturn("ms1");
+        Mockito.when(instance1.getHostName()).thenReturn(hostName);
         Mockito.when(instance1.getIPAddr()).thenReturn(ip);
         Mockito.when(instance1.getPort()).thenReturn(port);
         Mockito.when(instance1.isPortEnabled(InstanceInfo.PortType.SECURE)).thenReturn(securePort);

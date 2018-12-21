@@ -24,6 +24,7 @@ package at.twinformatics.eureka.adapter.consul.mapper;
 
 import at.twinformatics.eureka.adapter.consul.model.Service;
 import com.netflix.appinfo.InstanceInfo;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -37,16 +38,28 @@ public class InstanceInfoMapper {
 
     private static final List<String> NO_SERVICE_TAGS = new ArrayList<>();
 
+    @Value("${eurekaConsulAdapter.preferHostName:false}")
+    private boolean preferHostName;
+    
     public Service map(InstanceInfo instanceInfo) {
+        String address = getAddress(instanceInfo);
         return Service.builder()
-                .address(instanceInfo.getIPAddr())
-                .serviceAddress(instanceInfo.getIPAddr())
+                .address(address)
+                .serviceAddress(address)
                 .serviceID(instanceInfo.getId())
                 .servicePort(getPort(instanceInfo))
                 .node(instanceInfo.getAppName())
                 .nodeMeta(new HashMap<>(instanceInfo.getMetadata()))
                 .serviceTags(NO_SERVICE_TAGS)
                 .build();
+    }
+    
+    private String getAddress(InstanceInfo instanceInfo) {
+        if (preferHostName) {
+            return instanceInfo.getHostName();
+        } else {
+            return instanceInfo.getIPAddr();
+        }
     }
 
     private int getPort(InstanceInfo instanceInfo) {
@@ -55,5 +68,9 @@ public class InstanceInfoMapper {
         } else {
             return instanceInfo.getPort();
         }
+    }
+
+    public void setPreferHostName(boolean preferHostName) {
+        this.preferHostName = preferHostName;
     }
 }
