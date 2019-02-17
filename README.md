@@ -55,7 +55,7 @@ dependencies {
 
 ### Versions 1.1.x and later
 - Spring Boot 2.1.x
-- Spring Cloud Finchley
+- Spring Cloud Greenwich
 
 ### Versions 1.0.x and later
 - Spring Boot 2.0.x
