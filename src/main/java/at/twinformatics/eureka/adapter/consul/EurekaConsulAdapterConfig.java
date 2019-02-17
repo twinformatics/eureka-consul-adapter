@@ -66,7 +66,7 @@ public class EurekaConsulAdapterConfig {
         eurekaClient.getApplications(); // force initialization
         return new RegistrationEventInstanceRegistry(eurekaServerConfig, eurekaClientConfig,
                 serverCodecs, eurekaClient,
-                instanceRegistryProperties.getExpectedNumberOfRenewsPerMin(),
+                instanceRegistryProperties.getExpectedNumberOfClientsSendingRenews(),
                 instanceRegistryProperties.getDefaultOpenForTrafficCount(), serviceChangeDetector);
     }
 

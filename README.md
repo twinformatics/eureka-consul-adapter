@@ -53,12 +53,16 @@ dependencies {
 
 - Java 1.8+
 
-### Versions 1.x and later
-- Spring Boot 2.0
+### Versions 1.1.x and later
+- Spring Boot 2.1.x
+- Spring Cloud Finchley
+
+### Versions 1.0.x and later
+- Spring Boot 2.0.x
 - Spring Cloud Finchley
 
 ### Versions 0.x
-- Spring Boot 1.5 
+- Spring Boot 1.5.x 
 - Spring Cloud Edgware
 
 
