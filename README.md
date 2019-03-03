@@ -29,6 +29,10 @@ uses the async capabilities of Spring MVC. The default timeout for async request
  and can cause `AsyncRequestTimeoutExceptions`. **To prevent this you need to set `spring.mvc.async.request-timeout` to
  at least 35000 (35 seconds)**.
 
+# HostName vs IP
+If you want this adapter to use host name instead of IP of registered service in `/v1/catalog/service/{service}` endpoint then add this line to your Spring properties file: `eurekaConsulAdapter.preferHostName: true`  
+  
+
 # How to use this starter
 
 Simply add this dependency the your Spring Cloud Eureka Server (https://github.com/spring-cloud-samples/eureka):
