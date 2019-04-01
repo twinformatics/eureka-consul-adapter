@@ -22,6 +22,9 @@
  */
 package at.twinformatics.eureka.adapter.consul.controller;
 
+import at.twinformatics.eureka.adapter.consul.mapper.MetadataMapper;
+import at.twinformatics.eureka.adapter.consul.mapper.NodeMetadataMapper;
+import at.twinformatics.eureka.adapter.consul.mapper.ServiceMetadataMapper;
 import at.twinformatics.eureka.adapter.consul.service.RegistrationService;
 import at.twinformatics.eureka.adapter.consul.service.ServiceChangeDetector;
 import at.twinformatics.eureka.adapter.consul.mapper.InstanceInfoMapper;
@@ -62,8 +65,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @Slf4j
 @RunWith(SpringRunner.class)
-@WebMvcTest(controllers = {ServiceController.class, ServiceChangeDetector.class, InstanceInfoMapper.class,
-        RegistrationService.class})
+@WebMvcTest(controllers = { ServiceController.class, ServiceChangeDetector.class, InstanceInfoMapper.class,
+                            RegistrationService.class, MetadataMapper.class })
 public class ServiceControllerTest {
 
     private MockMvc mockMvc;
@@ -155,8 +158,8 @@ public class ServiceControllerTest {
 
     private ResultActions performAsync(String url) throws Exception {
         MvcResult mvcResult = this.mockMvc.perform(get(url))
-                .andExpect(status().isOk())
-                .andReturn();
+                                          .andExpect(status().isOk())
+                                          .andReturn();
 
         return this.mockMvc.perform(asyncDispatch(mvcResult));
     }
@@ -239,14 +242,19 @@ public class ServiceControllerTest {
 
         Mockito.when(registry.getApplication("ms1")).thenReturn(ms1);
 
+        MetadataMapper metadataMapper = new ServiceMetadataMapper();
+        instanceInfoMapper.setMetadataMapper(metadataMapper);
+
         performAsync("/v1/catalog/service/ms1?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(jsonPath("$[0].Address", Matchers.is("1.2.3.4")))
                 .andExpect(jsonPath("$[0].Node", Matchers.is("ms1")))
                 .andExpect(jsonPath("$[0].ServiceAddress", Matchers.is("1.2.3.4")))
+                .andExpect(jsonPath("$[0].ServiceName", Matchers.is("ms1")))
                 .andExpect(jsonPath("$[0].ServiceID", Matchers.is("1")))
                 .andExpect(jsonPath("$[0].ServicePort", Matchers.is(80)))
                 .andExpect(jsonPath("$[0].NodeMeta").isEmpty())
+                .andExpect(jsonPath("$[0].ServiceMeta").isEmpty())
                 .andExpect(jsonPath("$[0].ServiceTags", Matchers.is(new JSONArray())));
 
         InstanceInfo instance2 = mock1Instance("2","1.2.3.5", "ms2.com", 81, true);
@@ -263,37 +271,99 @@ public class ServiceControllerTest {
                 .andExpect(jsonPath("$[0].Address", Matchers.is("1.2.3.4")))
                 .andExpect(jsonPath("$[0].Node", Matchers.is("ms1")))
                 .andExpect(jsonPath("$[0].ServiceAddress", Matchers.is("1.2.3.4")))
+                .andExpect(jsonPath("$[0].ServiceName", Matchers.is("ms1")))
                 .andExpect(jsonPath("$[0].ServiceID", Matchers.is("1")))
                 .andExpect(jsonPath("$[0].ServicePort", Matchers.is(80)))
                 .andExpect(jsonPath("$[0].NodeMeta").isEmpty())
+                .andExpect(jsonPath("$[0].ServiceMeta").isEmpty())
                 .andExpect(jsonPath("$[0].ServiceTags", Matchers.is(new JSONArray())))
 
                 .andExpect(jsonPath("$[1].Address", Matchers.is("1.2.3.5")))
                 .andExpect(jsonPath("$[1].Node", Matchers.is("ms1")))
                 .andExpect(jsonPath("$[1].ServiceAddress", Matchers.is("1.2.3.5")))
+                .andExpect(jsonPath("$[1].ServiceName", Matchers.is("ms1")))
                 .andExpect(jsonPath("$[1].ServiceID", Matchers.is("2")))
                 .andExpect(jsonPath("$[1].ServicePort", Matchers.is(443)))
-                .andExpect(jsonPath("$[1].NodeMeta.k1", Matchers.is("v1")))
-                .andExpect(jsonPath("$[1].NodeMeta.k2", Matchers.is("v2")))
+                .andExpect(jsonPath("$[1].NodeMeta").isEmpty())
+                .andExpect(jsonPath("$[1].ServiceMeta.k1", Matchers.is("v1")))
+                .andExpect(jsonPath("$[1].ServiceMeta.k2", Matchers.is("v2")))
                 .andExpect(jsonPath("$[1].ServiceTags", Matchers.is(new JSONArray())));
     }
 
     @Test
+    public void service_sampleService_jsonObject_nodeMetadataMapper() throws Exception{
+
+        Applications applications = mock2Applications();
+        Mockito.when(registry.getApplications()).thenReturn(applications);
+        Application ms1 = applications.getRegisteredApplications().get(0);
+
+        InstanceInfo instance = mock1Instance();
+        ms1.addInstance(instance);
+
+        Mockito.when(registry.getApplication("ms1")).thenReturn(ms1);
+
+        String nodeMetaPrefix = "nodeMeta_";
+        MetadataMapper metadataMapper = new NodeMetadataMapper(nodeMetaPrefix);
+        instanceInfoMapper.setMetadataMapper(metadataMapper);
+
+        Map<String, String> md = new HashMap<>();
+        md.put("k1", "v1");
+        md.put("k2", "v2");
+        md.put("nodeMeta_k1", "nv1");
+        md.put("nodeMeta_k2", "nv2");
+        Mockito.when(instance.getMetadata()).thenReturn(md);
+
+        performAsync("/v1/catalog/service/ms1?wait=1ms")
+            .andExpect(content().contentType("application/json;charset=UTF-8"))
+            .andExpect(jsonPath("$[0].Address", Matchers.is("1.2.3.4")))
+            .andExpect(jsonPath("$[0].Node", Matchers.is("ms1")))
+            .andExpect(jsonPath("$[0].ServiceAddress", Matchers.is("1.2.3.4")))
+            .andExpect(jsonPath("$[0].ServiceName", Matchers.is("ms1")))
+            .andExpect(jsonPath("$[0].ServiceID", Matchers.is("1")))
+            .andExpect(jsonPath("$[0].ServicePort", Matchers.is(80)))
+            .andExpect(jsonPath("$[0].NodeMeta.k1", Matchers.is("nv1")))
+            .andExpect(jsonPath("$[0].NodeMeta.k2", Matchers.is("nv2")))
+            .andExpect(jsonPath("$[0].ServiceMeta.k1", Matchers.is("v1")))
+            .andExpect(jsonPath("$[0].ServiceMeta.k2", Matchers.is("v2")))
+            .andExpect(jsonPath("$[0].ServiceTags", Matchers.is(new JSONArray())));
+
+        nodeMetaPrefix = "";
+        metadataMapper = new NodeMetadataMapper(nodeMetaPrefix);
+        instanceInfoMapper.setMetadataMapper(metadataMapper);
+
+        performAsync("/v1/catalog/service/ms1?wait=1ms")
+            .andExpect(content().contentType("application/json;charset=UTF-8"))
+            .andExpect(jsonPath("$[0].Address", Matchers.is("1.2.3.4")))
+            .andExpect(jsonPath("$[0].Node", Matchers.is("ms1")))
+            .andExpect(jsonPath("$[0].ServiceAddress", Matchers.is("1.2.3.4")))
+            .andExpect(jsonPath("$[0].ServiceName", Matchers.is("ms1")))
+            .andExpect(jsonPath("$[0].ServiceID", Matchers.is("1")))
+            .andExpect(jsonPath("$[0].ServicePort", Matchers.is(80)))
+            .andExpect(jsonPath("$[0].NodeMeta.k1", Matchers.is("v1")))
+            .andExpect(jsonPath("$[0].NodeMeta.k2", Matchers.is("v2")))
+            .andExpect(jsonPath("$[0].NodeMeta.nodeMeta_k1", Matchers.is("nv1")))
+            .andExpect(jsonPath("$[0].NodeMeta.nodeMeta_k2", Matchers.is("nv2")))
+            .andExpect(jsonPath("$[0].ServiceMeta").isEmpty())
+            .andExpect(jsonPath("$[0].ServiceTags", Matchers.is(new JSONArray())));
+    }
+
+    @Test
     public void service_sampleService_jsonObject_preferHostName() throws Exception {
+
         Applications applications = mock2Applications();
         Mockito.when(registry.getApplications()).thenReturn(applications);
         Application ms1 = applications.getRegisteredApplications().get(0);
 
         InstanceInfo instance1 = mock1Instance();
         ms1.addInstance(instance1);
-        
+
         InstanceInfo instance2 = mock1Instance("2","1.2.3.5", "2.ms1.com", 81, true);
         ms1.addInstance(instance2);
 
         Mockito.when(registry.getApplication("ms1")).thenReturn(ms1);
 
         instanceInfoMapper.setPreferHostName(true);
-                
+
         performAsync("/v1/catalog/service/ms1?wait=1ms")
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andExpect(jsonPath("$[0].Address", Matchers.is("ms1.com")))
@@ -350,7 +420,6 @@ public class ServiceControllerTest {
 
     @Test(timeout = 3000)
     public void service_eventInterruptsRequestError_isResolved() throws Exception {
-
 
         Applications applications = mock2Applications();
         Mockito.when(registry.getApplications()).thenReturn(applications);

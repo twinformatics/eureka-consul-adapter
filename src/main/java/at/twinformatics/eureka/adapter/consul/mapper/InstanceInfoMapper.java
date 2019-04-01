@@ -24,12 +24,13 @@ package at.twinformatics.eureka.adapter.consul.mapper;
 
 import at.twinformatics.eureka.adapter.consul.model.Service;
 import com.netflix.appinfo.InstanceInfo;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+
 
 import static com.netflix.appinfo.InstanceInfo.PortType.SECURE;
 
@@ -40,20 +41,29 @@ public class InstanceInfoMapper {
 
     @Value("${eurekaConsulAdapter.preferHostName:false}")
     private boolean preferHostName;
-    
+
+    private MetadataMapper metadataMapper;
+
+    @Autowired
+    public InstanceInfoMapper(MetadataMapper metadataMapper) {
+        this.metadataMapper = metadataMapper;
+    }
+
     public Service map(InstanceInfo instanceInfo) {
         String address = getAddress(instanceInfo);
         return Service.builder()
-                .address(address)
-                .serviceAddress(address)
-                .serviceID(instanceInfo.getId())
-                .servicePort(getPort(instanceInfo))
-                .node(instanceInfo.getAppName())
-                .nodeMeta(new HashMap<>(instanceInfo.getMetadata()))
-                .serviceTags(NO_SERVICE_TAGS)
-                .build();
+                      .address(address)
+                      .serviceAddress(address)
+                      .serviceName(instanceInfo.getAppName())
+                      .serviceID(instanceInfo.getId())
+                      .servicePort(getPort(instanceInfo))
+                      .node(instanceInfo.getAppName())
+                      .nodeMeta(metadataMapper.extractNodeMetadata(instanceInfo.getMetadata()))
+                      .serviceMeta(metadataMapper.extractServiceMetadata(instanceInfo.getMetadata()))
+                      .serviceTags(NO_SERVICE_TAGS)
+                      .build();
     }
-    
+
     private String getAddress(InstanceInfo instanceInfo) {
         if (preferHostName) {
             return instanceInfo.getHostName();
@@ -72,5 +82,9 @@ public class InstanceInfoMapper {
 
     public void setPreferHostName(boolean preferHostName) {
         this.preferHostName = preferHostName;
+    }
+
+    public void setMetadataMapper(MetadataMapper metadataMapper) {
+        this.metadataMapper = metadataMapper;
     }
 }
