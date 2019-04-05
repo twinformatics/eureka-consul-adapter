@@ -32,6 +32,11 @@ uses the async capabilities of Spring MVC. The default timeout for async request
 # HostName vs IP
 If you want this adapter to use host name instead of IP of registered service in `/v1/catalog/service/{service}` endpoint then add this line to your Spring properties file: `eurekaConsulAdapter.preferHostName: true`  
   
+# Configuration options
+Add the following options to your config (e.g. application.properties), if required.
+- eurekaConsulAdapter.preferHostName: uses the hostname, rather than the ip address of the service (default is false)
+- eurekaConsulAdapter.useNodeMeta: use the ServiceMeta tag for metadata instead of NodeMeta (details see #16)
+- eurekaConsulAdapter.nodeMetaPrefix: only move those meta entries that match the prefix. the prefix will be trimmed from the entry key (details see #16).
 
 # How to use this starter
 
