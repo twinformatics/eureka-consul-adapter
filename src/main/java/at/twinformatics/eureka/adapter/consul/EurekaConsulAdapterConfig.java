@@ -24,6 +24,9 @@ package at.twinformatics.eureka.adapter.consul;
 
 import at.twinformatics.eureka.adapter.consul.controller.AgentController;
 import at.twinformatics.eureka.adapter.consul.controller.ServiceController;
+import at.twinformatics.eureka.adapter.consul.mapper.MetadataMapper;
+import at.twinformatics.eureka.adapter.consul.mapper.ServiceMetadataMapper;
+import at.twinformatics.eureka.adapter.consul.mapper.NodeMetadataMapper;
 import at.twinformatics.eureka.adapter.consul.service.RegistrationEventInstanceRegistry;
 import at.twinformatics.eureka.adapter.consul.service.RegistrationService;
 import at.twinformatics.eureka.adapter.consul.service.ServiceChangeDetector;
@@ -33,6 +36,7 @@ import com.netflix.discovery.EurekaClientConfig;
 import com.netflix.eureka.EurekaServerConfig;
 import com.netflix.eureka.registry.PeerAwareInstanceRegistry;
 import com.netflix.eureka.resources.ServerCodecs;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cloud.netflix.eureka.server.InstanceRegistryProperties;
 import org.springframework.context.annotation.Bean;
@@ -45,6 +49,12 @@ import org.springframework.util.Assert;
 @EnableAsync
 public class EurekaConsulAdapterConfig {
 
+    @Value("${eurekaConsulAdapter.useNodeMeta:false}")
+    private boolean useNodeMeta;
+
+    @Value("${eurekaConsulAdapter.nodeMetaPrefix:}")
+    private String nodeMetaPrefix;
+
     @Bean
     @ConditionalOnMissingBean
     public AgentController agentController() {
@@ -53,8 +63,8 @@ public class EurekaConsulAdapterConfig {
 
     @Bean
     @ConditionalOnMissingBean
-    public ServiceController serviceController(RegistrationService registrationService) {
-        return new ServiceController(registrationService, serviceMapper());
+    public ServiceController serviceController(RegistrationService registrationService, MetadataMapper metadataMapper) {
+        return new ServiceController(registrationService, serviceMapper(metadataMapper));
     }
 
     @Bean
@@ -72,8 +82,17 @@ public class EurekaConsulAdapterConfig {
 
     @Bean
     @ConditionalOnMissingBean
-    public InstanceInfoMapper serviceMapper() {
-        return new InstanceInfoMapper();
+    public MetadataMapper instanceMetadataMapper() {
+        if(useNodeMeta){
+            return new NodeMetadataMapper(nodeMetaPrefix);
+        }
+        return new ServiceMetadataMapper();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public InstanceInfoMapper serviceMapper(MetadataMapper metadataMapper) {
+        return new InstanceInfoMapper(metadataMapper);
     }
 
     @Bean
@@ -89,5 +108,4 @@ public class EurekaConsulAdapterConfig {
     public ServiceChangeDetector serviceChangeDetector() {
         return new ServiceChangeDetector();
     }
-
 }

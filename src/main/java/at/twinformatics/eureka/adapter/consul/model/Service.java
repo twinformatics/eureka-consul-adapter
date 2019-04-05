@@ -45,6 +45,9 @@ public class Service {
     @JsonProperty("ServiceAddress")
     private String serviceAddress;
 
+    @JsonProperty("ServiceName")
+    private String serviceName;
+
     @JsonProperty("ServiceID")
     private String serviceID;
 
@@ -53,6 +56,9 @@ public class Service {
 
     @JsonProperty("NodeMeta")
     private Map<String, String> nodeMeta;
+
+    @JsonProperty("ServiceMeta")
+    private Map<String, String> serviceMeta;
 
     // will be empty, eureka does not have the concept of service tags
     @JsonProperty("ServiceTags")
