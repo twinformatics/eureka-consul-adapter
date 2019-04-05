@@ -34,9 +34,10 @@ If you want this adapter to use host name instead of IP of registered service in
   
 # Configuration options
 Add the following options to your config (e.g. application.properties), if required.
-- eurekaConsulAdapter.preferHostName: uses the hostname, rather than the ip address of the service (default is false)
-- eurekaConsulAdapter.useNodeMeta: use the ServiceMeta tag for metadata instead of NodeMeta (details see #16)
-- eurekaConsulAdapter.nodeMetaPrefix: only move those meta entries that match the prefix. the prefix will be trimmed from the entry key (details see #16).
+- `eurekaConsulAdapter.preferHostName`: uses the hostname, rather than the ip address of the service (default is false)
+- `eurekaConsulAdapter.useNodeMeta`: use the ServiceMeta tag for metadata instead of NodeMeta (details see [#16](https://github.com/twinformatics/eureka-consul-adapter/pull/16)).
+)
+- `eurekaConsulAdapter.nodeMetaPrefix`: only move those meta entries that match the prefix. the prefix will be trimmed from the entry key (details see [#16](https://github.com/twinformatics/eureka-consul-adapter/pull/16)).
 
 # How to use this starter
 
