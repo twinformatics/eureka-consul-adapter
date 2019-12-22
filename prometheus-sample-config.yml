@@ -39,3 +39,6 @@ scrape_configs:
         action: keep
       - source_labels: ['__meta_consul_service']
         target_label: job
+      - source_labels: ['__meta_consul_address', '__meta_consul_service_metadata_management_port']
+        separator: ':'
+        target_label: __address__
