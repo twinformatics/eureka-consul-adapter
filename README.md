@@ -44,7 +44,7 @@ Simply add this dependency the your Spring Cloud Eureka Server (https://github.c
 <dependency>
   <groupId>at.twinformatics</groupId>
   <artifactId>eureka-consul-adapter</artifactId>
-  <version>${eureka-consul-adapter.version}<version>
+  <version>${eureka-consul-adapter.version}</version>
 </dependency>
 ```
 
