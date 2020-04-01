@@ -373,6 +373,78 @@ public class ServiceControllerTest {
                 .andExpect(jsonPath("$[1].ServiceAddress", Matchers.is("2.ms1.com")));
     }
 
+    @Test
+    public void service_healthEndpoint_jsonObject() throws Exception {
+
+        Applications applications = mock2Applications();
+        Mockito.when(registry.getApplications()).thenReturn(applications);
+        Application ms1 = applications.getRegisteredApplications().get(0);
+
+        InstanceInfo instance1 = mock1Instance();
+        ms1.addInstance(instance1);
+
+        Mockito.when(registry.getApplication("ms1")).thenReturn(ms1);
+
+        MetadataMapper metadataMapper = new ServiceMetadataMapper();
+        instanceInfoMapper.setMetadataMapper(metadataMapper);
+
+        performAsync("/v1/health/service/ms1?wait=1ms")
+                .andExpect(content().contentType("application/json;charset=UTF-8"))
+                .andExpect(jsonPath("$[0].Node.Node", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[0].Node.Address", Matchers.is("1.2.3.4")))
+                .andExpect(jsonPath("$[0].Node.Meta").isEmpty())
+                .andExpect(jsonPath("$[0].Service.ID", Matchers.is("1")))
+                .andExpect(jsonPath("$[0].Service.Service", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[0].Service.Address", Matchers.is("1.2.3.4")))
+                .andExpect(jsonPath("$[0].Service.Port", Matchers.is(80)))
+                .andExpect(jsonPath("$[0].Service.Meta").isEmpty())
+                .andExpect(jsonPath("$[0].Service.Tags", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$[0].Checks[0].Node", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[0].Checks[0].CheckID", Matchers.is("service:1")))
+                .andExpect(jsonPath("$[0].Checks[0].Name", Matchers.is("Service '1' check")))
+                .andExpect(jsonPath("$[0].Checks[0].Status", Matchers.is("UP")));
+
+        InstanceInfo instance2 = mock1Instance("2","1.2.3.5", "ms2.com", 81, true);
+
+        Map<String, String> md = new HashMap<>();
+        md.put("k1", "v1");
+        md.put("k2", "v2");
+        Mockito.when(instance2.getMetadata()).thenReturn(md);
+
+        ms1.addInstance(instance2);
+
+        performAsync("/v1/health/service/ms1?wait=1ms")
+                .andExpect(content().contentType("application/json;charset=UTF-8"))
+                .andExpect(jsonPath("$[0].Node.Node", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[0].Node.Address", Matchers.is("1.2.3.4")))
+                .andExpect(jsonPath("$[0].Node.Meta").isEmpty())
+                .andExpect(jsonPath("$[0].Service.ID", Matchers.is("1")))
+                .andExpect(jsonPath("$[0].Service.Service", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[0].Service.Address", Matchers.is("1.2.3.4")))
+                .andExpect(jsonPath("$[0].Service.Port", Matchers.is(80)))
+                .andExpect(jsonPath("$[0].Service.Meta").isEmpty())
+                .andExpect(jsonPath("$[0].Service.Tags", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$[0].Checks[0].Node", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[0].Checks[0].CheckID", Matchers.is("service:1")))
+                .andExpect(jsonPath("$[0].Checks[0].Name", Matchers.is("Service '1' check")))
+                .andExpect(jsonPath("$[0].Checks[0].Status", Matchers.is("UP")))
+
+                .andExpect(jsonPath("$[1].Node.Node", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[1].Node.Address", Matchers.is("1.2.3.5")))
+                .andExpect(jsonPath("$[1].Node.Meta").isEmpty())
+                .andExpect(jsonPath("$[1].Service.ID", Matchers.is("2")))
+                .andExpect(jsonPath("$[1].Service.Service", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[1].Service.Address", Matchers.is("1.2.3.5")))
+                .andExpect(jsonPath("$[1].Service.Port", Matchers.is(443)))
+                .andExpect(jsonPath("$[1].Service.Meta.k1", Matchers.is("v1")))
+                .andExpect(jsonPath("$[1].Service.Meta.k2", Matchers.is("v2")))
+                .andExpect(jsonPath("$[1].Service.Tags", Matchers.is(new JSONArray())))
+                .andExpect(jsonPath("$[1].Checks[0].Node", Matchers.is("ms1")))
+                .andExpect(jsonPath("$[1].Checks[0].CheckID", Matchers.is("service:2")))
+                .andExpect(jsonPath("$[1].Checks[0].Name", Matchers.is("Service '2' check")))
+                .andExpect(jsonPath("$[1].Checks[0].Status", Matchers.is("UP")));
+    }
+
     @Test(timeout = 10000)
     public void service_serviceChangesToOtherServices_interruptOnCorrectService() throws Exception {
 
@@ -482,6 +554,7 @@ public class ServiceControllerTest {
         Mockito.when(instance1.getPort()).thenReturn(port);
         Mockito.when(instance1.isPortEnabled(InstanceInfo.PortType.SECURE)).thenReturn(securePort);
         Mockito.when(instance1.getSecurePort()).thenReturn(443);
+        Mockito.when(instance1.getStatus()).thenReturn(InstanceInfo.InstanceStatus.UP);
         return instance1;
     }
 

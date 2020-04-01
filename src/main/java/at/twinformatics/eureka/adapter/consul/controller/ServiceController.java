@@ -24,6 +24,7 @@ package at.twinformatics.eureka.adapter.consul.controller;
 
 import at.twinformatics.eureka.adapter.consul.mapper.InstanceInfoMapper;
 import at.twinformatics.eureka.adapter.consul.model.Service;
+import at.twinformatics.eureka.adapter.consul.model.ServiceHealth;
 import at.twinformatics.eureka.adapter.consul.service.RegistrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -79,6 +80,19 @@ public class ServiceController {
         return registrationService.getService(appName, getWaitMillis(wait), index)
                 .map(item -> {
                     List<Service> services = item.getItem().stream().map(instanceInfoMapper::map).collect(toList());
+                    return createResponseEntity(services, item.getChangeIndex());
+                });
+    }
+
+    @GetMapping(value = "/v1/health/service/{appName}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Single<ResponseEntity<List<ServiceHealth>>> getServiceHealth(@PathVariable("appName") String appName,
+                                                                        @QueryParam(QUERY_PARAM_WAIT) String wait,
+                                                                        @QueryParam(QUERY_PARAM_INDEX) Long index) {
+        Assert.isTrue(appName != null, "service name can not be null");
+        return registrationService.getService(appName, getWaitMillis(wait), index)
+                .map(item -> {
+                    List<ServiceHealth> services = item.getItem().stream()
+                            .map(instanceInfoMapper::mapToHealth).collect(toList());
                     return createResponseEntity(services, item.getChangeIndex());
                 });
     }

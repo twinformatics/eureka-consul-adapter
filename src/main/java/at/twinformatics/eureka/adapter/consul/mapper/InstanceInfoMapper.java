@@ -23,12 +23,14 @@
 package at.twinformatics.eureka.adapter.consul.mapper;
 
 import at.twinformatics.eureka.adapter.consul.model.Service;
+import at.twinformatics.eureka.adapter.consul.model.ServiceHealth;
 import com.netflix.appinfo.InstanceInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -62,6 +64,34 @@ public class InstanceInfoMapper {
                       .serviceMeta(metadataMapper.extractServiceMetadata(instanceInfo.getMetadata()))
                       .serviceTags(NO_SERVICE_TAGS)
                       .build();
+    }
+
+    public ServiceHealth mapToHealth(InstanceInfo instanceInfo) {
+        String address = getAddress(instanceInfo);
+        ServiceHealth.Node node = ServiceHealth.Node.builder()
+                .name(instanceInfo.getAppName())
+                .address(address)
+                .meta(metadataMapper.extractNodeMetadata(instanceInfo.getMetadata()))
+                .build();
+        ServiceHealth.Service service = ServiceHealth.Service.builder()
+                .id(instanceInfo.getId())
+                .name(instanceInfo.getAppName())
+                .tags(NO_SERVICE_TAGS)
+                .address(address)
+                .meta(metadataMapper.extractServiceMetadata(instanceInfo.getMetadata()))
+                .port(getPort(instanceInfo))
+                .build();
+        ServiceHealth.Check check = ServiceHealth.Check.builder()
+                .node(instanceInfo.getAppName())
+                .checkID("service:" + instanceInfo.getId())
+                .name("Service '" + instanceInfo.getId() + "' check")
+                .status(instanceInfo.getStatus().name())
+                .build();
+        return ServiceHealth.builder()
+                .node(node)
+                .service(service)
+                .checks(Collections.singletonList(check))
+                .build();
     }
 
     private String getAddress(InstanceInfo instanceInfo) {
